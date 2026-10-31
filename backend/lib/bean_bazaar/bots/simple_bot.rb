@@ -73,7 +73,7 @@ module BeanBazaar
       end
 
       def make_room
-        field_index = harvestable_indexes.max_by { |index| [ player.fields[index].coins, -player.fields[index].count ] }
+        field_index = harvestable_indexes.max_by { |index| [player.fields[index].coins, -player.fields[index].count] }
         @game.harvest(player_index: @player_index, field_index: field_index)
         field_index
       end
@@ -98,10 +98,10 @@ module BeanBazaar
         partner_indexes.each do |partner_index|
           partner = SimpleBot.new(@game, partner_index)
           wanted_index = @game.players[partner_index].hand.cards.index { |hand_card| grows?(hand_card) }
-          requested = wanted_index.nil? ? [] : [ @game.players[partner_index].hand.cards[wanted_index] ]
-          next if !partner.accepts?(offered: [ card ], requested: requested)
+          requested = wanted_index.nil? ? [] : [@game.players[partner_index].hand.cards[wanted_index]]
+          next if !partner.accepts?(offered: [card], requested: requested)
 
-          @game.trade(partner_index: partner_index, face_up_indexes: [ face_up_index ], partner_hand_indexes: Array(wanted_index))
+          @game.trade(partner_index: partner_index, face_up_indexes: [face_up_index], partner_hand_indexes: Array(wanted_index))
           return true
         end
         false

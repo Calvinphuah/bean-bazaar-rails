@@ -1,8 +1,8 @@
-require "bean_bazaar"
+require 'bean_bazaar'
 
 RSpec.describe BeanBazaar::Deck do
-  describe ".shuffled" do
-    it "holds the full deck in a repeatable order for a seed" do
+  describe '.shuffled' do
+    it 'holds the full deck in a repeatable order for a seed' do
       deck = described_class.shuffled(random: Random.new(1))
       same_seed = described_class.shuffled(random: Random.new(1))
 
@@ -11,15 +11,15 @@ RSpec.describe BeanBazaar::Deck do
     end
   end
 
-  describe "#draw" do
-    it "takes cards from the top" do
+  describe '#draw' do
+    it 'takes cards from the top' do
       deck = described_class.new(draw_pile: %i[blue soy red])
 
       expect(deck.draw(2)).to eq(%i[blue soy])
       expect(deck.draw_pile).to eq(%i[red])
     end
 
-    it "shuffles the discards back in when the pile runs dry" do
+    it 'shuffles the discards back in when the pile runs dry' do
       deck = described_class.new(draw_pile: %i[blue], discard_pile: %i[soy])
 
       expect(deck.draw(2)).to eq(%i[blue soy])
@@ -27,7 +27,7 @@ RSpec.describe BeanBazaar::Deck do
       expect(deck.discard_pile).to be_empty
     end
 
-    it "stops on the third run-out" do
+    it 'stops on the third run-out' do
       deck = described_class.new(draw_pile: %i[blue], discard_pile: %i[soy], run_outs: 2)
 
       expect(deck.draw(3)).to eq(%i[blue])
@@ -36,8 +36,8 @@ RSpec.describe BeanBazaar::Deck do
     end
   end
 
-  describe "#discard" do
-    it "adds cards to the discard pile" do
+  describe '#discard' do
+    it 'adds cards to the discard pile' do
       deck = described_class.new(draw_pile: [])
       deck.discard(%i[red red])
 

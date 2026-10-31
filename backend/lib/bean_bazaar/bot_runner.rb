@@ -46,7 +46,7 @@ module BeanBazaar
       active_bot = bot(@game.active_index)
       return active_bot.play_plant_phase if @game.phase == :plant
 
-      active_bot.play_trade_phase(partner_indexes: bot_indexes - [ @game.active_index ])
+      active_bot.play_trade_phase(partner_indexes: bot_indexes - [@game.active_index])
     end
   end
 end

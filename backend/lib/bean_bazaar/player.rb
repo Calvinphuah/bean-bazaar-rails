@@ -10,11 +10,11 @@ module BeanBazaar
 
     def self.from_h(hash)
       new(
-        name: hash["name"],
-        hand: Hand.from_h(hash["hand"]),
-        fields: hash["fields"].map { |field| Field.from_h(field) },
-        coin_cards: hash["coin_cards"].map(&:to_sym),
-        pending: hash["pending"].map(&:to_sym)
+        name: hash['name'],
+        hand: Hand.from_h(hash['hand']),
+        fields: hash['fields'].map { |field| Field.from_h(field) },
+        coin_cards: hash['coin_cards'].map(&:to_sym),
+        pending: hash['pending'].map(&:to_sym)
       )
     end
 
@@ -52,8 +52,8 @@ module BeanBazaar
     # Returns the cards that go to the discard pile.
     def harvest(field_index)
       target = field(field_index)
-      raise IllegalMove, "That field is empty" if target.empty?
-      raise IllegalMove, "Harvest a field with more beans first" if protected?(target)
+      raise IllegalMove, 'That field is empty' if target.empty?
+      raise IllegalMove, 'Harvest a field with more beans first' if protected?(target)
 
       collect(target)
     end

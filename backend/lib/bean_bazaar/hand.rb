@@ -35,7 +35,7 @@ module BeanBazaar
 
     # Raises unless every index points at a different card in the row.
     def check!(indexes)
-      raise IllegalMove, "Pick each card only once" if indexes.uniq.size != indexes.size
+      raise IllegalMove, 'Pick each card only once' if indexes.uniq.size != indexes.size
 
       missing = indexes.find { |index| !index.between?(0, cards.size - 1) }
       raise IllegalMove, "There is no card at position #{missing}" if missing

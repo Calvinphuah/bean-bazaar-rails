@@ -4,7 +4,7 @@ module BeanBazaar
     attr_reader :bean, :count
 
     def self.from_h(hash)
-      new(bean: hash["bean"]&.to_sym, count: hash["count"])
+      new(bean: hash['bean']&.to_sym, count: hash['count'])
     end
 
     def initialize(bean: nil, count: 0)

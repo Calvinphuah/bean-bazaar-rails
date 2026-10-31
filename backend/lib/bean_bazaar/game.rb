@@ -26,13 +26,13 @@ module BeanBazaar
     # Rebuilds a game from #to_h after a JSON round trip (string keys and values).
     def self.from_h(hash)
       new(
-        players: hash["players"].map { |player| Player.from_h(player) },
-        deck: Deck.from_h(hash["deck"]),
-        phase: hash["phase"].to_sym,
-        active_index: hash["active_index"],
-        face_up: Hand.from_h(hash["face_up"]),
-        hand_plants: hash["hand_plants"],
-        log: hash.fetch("log", [])
+        players: hash['players'].map { |player| Player.from_h(player) },
+        deck: Deck.from_h(hash['deck']),
+        phase: hash['phase'].to_sym,
+        active_index: hash['active_index'],
+        face_up: Hand.from_h(hash['face_up']),
+        hand_plants: hash['hand_plants'],
+        log: hash.fetch('log', [])
       )
     end
 
@@ -54,7 +54,7 @@ module BeanBazaar
         active_index: active_index,
         face_up: face_up.to_h,
         hand_plants: hand_plants,
-        log: log
+        log: log,
       }
     end
 
@@ -76,18 +76,18 @@ module BeanBazaar
     def plant_from_hand(field_index)
       require_phase(:plant)
       raise IllegalMove, "You can plant at most #{MAX_HAND_PLANTS} cards from your hand" if hand_plants >= MAX_HAND_PLANTS
-      raise IllegalMove, "Your hand is empty" if active_player.hand.empty?
+      raise IllegalMove, 'Your hand is empty' if active_player.hand.empty?
 
       card = active_player.hand.front
       active_player.plant(card, field_index)
       active_player.hand.take_front
       @hand_plants += 1
-      note("#{active_player.name} planted #{bean_names([ card ])}")
+      note("#{active_player.name} planted #{bean_names([card])}")
     end
 
     def flip_cards
       require_phase(:plant)
-      raise IllegalMove, "Plant the front card of your hand first" if hand_plants.zero? && !active_player.hand.empty?
+      raise IllegalMove, 'Plant the front card of your hand first' if hand_plants.zero? && !active_player.hand.empty?
 
       @face_up = Hand.new(deck.draw(FLIP_COUNT))
       @phase = :trade
@@ -129,7 +129,7 @@ module BeanBazaar
     end
 
     def harvest(player_index:, field_index:)
-      raise IllegalMove, "The game is over" if over?
+      raise IllegalMove, 'The game is over' if over?
 
       player = player_at(player_index)
       coins_before = player.coins
@@ -142,7 +142,7 @@ module BeanBazaar
     end
 
     def buy_third_field(player_index:)
-      raise IllegalMove, "The game is over" if over?
+      raise IllegalMove, 'The game is over' if over?
 
       player = player_at(player_index)
       deck.discard(player.buy_third_field)
@@ -181,15 +181,15 @@ module BeanBazaar
         deck.discard(player.harvest_all)
       end
       @phase = :over
-      note("The deck ran out for the third time. Game over!")
+      note('The deck ran out for the third time. Game over!')
     end
 
     def note(message)
-      @log = (log + [ message ]).last(LOG_SIZE)
+      @log = (log + [message]).last(LOG_SIZE)
     end
 
     def bean_names(cards)
-      cards.map { |card| BeanType.find(card).name }.join(" and ")
+      cards.map { |card| BeanType.find(card).name }.join(' and ')
     end
 
     def trade_message(partner, offered, requested)

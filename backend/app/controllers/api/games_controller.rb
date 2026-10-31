@@ -1,22 +1,28 @@
-module Api
-  class GamesController < ApplicationController
-    DEFAULT_BOT_COUNT = 3
+class Api::GamesController < Api::BaseController
+  before_action :set_game, only: %i[show]
 
-    def create
-      game = Games::StartService.new(bot_count: bot_count).call
-      render json: GameSerializer.new(game), status: :created
-    end
+  # POST: /api/games
+  # @overload create
+  #   @param bot_count [Integer] how many bots to play against, default 3
+  #   @return [JSON] object: { game }
+  def create
+    result = Games::Create.new(params.fetch(:bot_count, Games::DEFAULT_BOT_COUNT)).call
+    render_result(result, success_code: :created)
+  end
 
-    def show
-      render json: GameSerializer.new(Game.find(params[:id]))
-    end
+  # GET: /api/games/:id
+  # @overload show(game_id)
+  #   @param game_id [String] game_id to query
+  #   @return [JSON] object: { game }
+  # @raise [NotFound] Raise Not Found if Game not found based on param game_id
+  def show
+    render json: { game: serialize(@game) }
+  end
 
-    private
+  private
 
-    def bot_count
-      Integer(params.fetch(:bot_count, DEFAULT_BOT_COUNT))
-    rescue ArgumentError, TypeError
-      raise BeanBazaar::IllegalMove, "bot_count must be a number"
-    end
+  # Set game
+  def set_game
+    @game = Game.find(params[:id])
   end
 end

@@ -12,9 +12,9 @@ module BeanBazaar
 
     def self.from_h(hash)
       new(
-        draw_pile: hash["draw_pile"].map(&:to_sym),
-        discard_pile: hash["discard_pile"].map(&:to_sym),
-        run_outs: hash["run_outs"]
+        draw_pile: hash['draw_pile'].map(&:to_sym),
+        discard_pile: hash['discard_pile'].map(&:to_sym),
+        run_outs: hash['run_outs']
       )
     end
 

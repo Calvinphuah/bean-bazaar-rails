@@ -1,4 +1,4 @@
-require "bean_bazaar"
+require 'bean_bazaar'
 
 RSpec.describe BeanBazaar::BotRunner do
   def card_total(game)
@@ -6,7 +6,7 @@ RSpec.describe BeanBazaar::BotRunner do
       game.players.sum { |player| player.hand.size + player.pending.size + player.coins + player.fields.sum(&:count) }
   end
 
-  [ 3, 4, 5 ].each do |player_count|
+  [3, 4, 5].each do |player_count|
     it "plays a full #{player_count}-bot game to the end without losing a card" do
       5.times do |seed|
         game = BeanBazaar::Game.start(names: Array.new(player_count) { |index| "Bot #{index}" }, random: Random.new(seed))
@@ -42,7 +42,7 @@ RSpec.describe BeanBazaar::BotRunner do
     expect(card_total(game)).to eq(104)
   end
 
-  it "waits while the human still has pending cards to plant" do
+  it 'waits while the human still has pending cards to plant' do
     game = BeanBazaar::Game.start(names: %w[You Bot1 Bot2], random: Random.new(2))
     game.plant_from_hand(0)
     game.flip_cards
@@ -54,16 +54,22 @@ RSpec.describe BeanBazaar::BotRunner do
     expect(game.players.drop(1).map(&:pending)).to all(be_empty)
   end
 
-  it "raises if the bots stop making progress" do
+  it 'raises if the bots stop making progress' do
     stuck_bot = Class.new do
-      def initialize(*) = nil
-      def play_plant_phase = nil
-      def plant_pending = nil
+      def initialize(*)
+        nil
+      end
+      def play_plant_phase
+        nil
+      end
+      def plant_pending
+        nil
+      end
     end
     game = BeanBazaar::Game.start(names: %w[A B C], random: Random.new(1))
     runner = described_class.new(game, human_index: nil, bot_class: stuck_bot)
-    stub_const("BeanBazaar::BotRunner::MAX_STEPS", 3)
+    stub_const('BeanBazaar::BotRunner::MAX_STEPS', 3)
 
-    expect { runner.run }.to raise_error(RuntimeError, "Bots made no progress after 3 steps")
+    expect { runner.run }.to raise_error(RuntimeError, 'Bots made no progress after 3 steps')
   end
 end

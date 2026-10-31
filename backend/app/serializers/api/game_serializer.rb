@@ -1,6 +1,6 @@
 # The game as the human sees it: their own hand in full, the bots' hands as
 # counts only. Fields, coins, pending and face-up cards are public at the table.
-class GameSerializer
+class Api::GameSerializer
   def initialize(game)
     @game = game
     @engine = game.engine
@@ -19,7 +19,7 @@ class GameSerializer
       face_up: @engine.face_up.cards,
       players: @engine.players.each_with_index.map { |player, index| player_json(player, index) },
       log: @engine.log,
-      bean_types: BeanBazaar::BeanType.all.map(&:to_h)
+      bean_types: BeanBazaar::BeanType.all.map(&:to_h),
     }
   end
 
@@ -32,7 +32,7 @@ class GameSerializer
       hand_size: player.hand.size,
       fields: player.fields.map { |field| field.to_h.merge(coins: field.coins) },
       coins: player.coins,
-      pending: player.pending
+      pending: player.pending,
     }
   end
 

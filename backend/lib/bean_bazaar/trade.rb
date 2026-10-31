@@ -21,7 +21,7 @@ module BeanBazaar
       requested = @partner.hand.take_at(@partner_hand_indexes)
       @partner.receive(offered)
       @active.receive(requested)
-      [ offered, requested ]
+      [offered, requested]
     end
 
     private
@@ -29,7 +29,7 @@ module BeanBazaar
     # Checks every side before moving any card, so a bad trade changes nothing.
     def validate!
       raise IllegalMove, "You can't trade with yourself" if @active.equal?(@partner)
-      raise IllegalMove, "A trade needs at least one card" if [ @face_up_indexes, @hand_indexes, @partner_hand_indexes ].all?(&:empty?)
+      raise IllegalMove, 'A trade needs at least one card' if [@face_up_indexes, @hand_indexes, @partner_hand_indexes].all?(&:empty?)
 
       @face_up.check!(@face_up_indexes)
       @active.hand.check!(@hand_indexes)

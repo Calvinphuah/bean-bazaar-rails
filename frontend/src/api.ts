@@ -6,15 +6,17 @@ async function request(path: string, init: RequestInit = {}): Promise<GameState>
     headers: { "Content-Type": "application/json", Accept: "application/json" },
   })
   const body: unknown = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(errorMessage(body, response.status))
+  // Every response is wrapped in a `game` root, success or error.
+  const game = typeof body === "object" && body !== null && "game" in body ? body.game : null
+  if (!response.ok) throw new Error(errorMessage(game, response.status))
 
   // The API is the only producer of this shape; trust it at this one boundary.
-  return body as GameState
+  return game as GameState
 }
 
-function errorMessage(body: unknown, status: number): string {
-  if (typeof body === "object" && body !== null && "error" in body && typeof body.error === "string") {
-    return body.error
+function errorMessage(game: unknown, status: number): string {
+  if (typeof game === "object" && game !== null && "error_message" in game && typeof game.error_message === "string") {
+    return game.error_message
   }
   return status === 404 ? "That game no longer exists" : "Something went wrong, please try again"
 }
