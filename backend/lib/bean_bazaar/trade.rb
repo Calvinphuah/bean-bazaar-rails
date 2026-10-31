@@ -13,6 +13,7 @@ module BeanBazaar
       @partner_hand_indexes = partner_hand_indexes
     end
 
+    # Returns [cards the active player gave, cards they got back].
     def execute
       validate!
 
@@ -20,6 +21,7 @@ module BeanBazaar
       requested = @partner.hand.take_at(@partner_hand_indexes)
       @partner.receive(offered)
       @active.receive(requested)
+      [ offered, requested ]
     end
 
     private

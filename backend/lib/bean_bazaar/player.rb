@@ -8,12 +8,26 @@ module BeanBazaar
 
     attr_reader :name, :hand, :fields, :coin_cards, :pending
 
+    def self.from_h(hash)
+      new(
+        name: hash["name"],
+        hand: Hand.from_h(hash["hand"]),
+        fields: hash["fields"].map { |field| Field.from_h(field) },
+        coin_cards: hash["coin_cards"].map(&:to_sym),
+        pending: hash["pending"].map(&:to_sym)
+      )
+    end
+
     def initialize(name:, hand: Hand.new, fields: Array.new(STARTING_FIELDS) { Field.new }, coin_cards: [], pending: [])
       @name = name
       @hand = hand
       @fields = fields
       @coin_cards = coin_cards
       @pending = pending
+    end
+
+    def to_h
+      { name: name, hand: hand.to_h, fields: fields.map(&:to_h), coin_cards: coin_cards, pending: pending }
     end
 
     # Harvested cards flip to their coin side, so coins are cards too.

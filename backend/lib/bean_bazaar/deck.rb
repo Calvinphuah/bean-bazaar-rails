@@ -10,11 +10,23 @@ module BeanBazaar
       new(draw_pile: BeanType.full_deck.shuffle(random: random), random: random)
     end
 
+    def self.from_h(hash)
+      new(
+        draw_pile: hash["draw_pile"].map(&:to_sym),
+        discard_pile: hash["discard_pile"].map(&:to_sym),
+        run_outs: hash["run_outs"]
+      )
+    end
+
     def initialize(draw_pile:, discard_pile: [], run_outs: 0, random: Random.new)
       @draw_pile = draw_pile
       @discard_pile = discard_pile
       @run_outs = run_outs
       @random = random
+    end
+
+    def to_h
+      { draw_pile: draw_pile, discard_pile: discard_pile, run_outs: run_outs }
     end
 
     # Returns up to `count` cards; fewer once the deck is exhausted.

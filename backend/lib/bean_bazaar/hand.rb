@@ -5,8 +5,16 @@ module BeanBazaar
   class Hand
     attr_reader :cards
 
+    def self.from_h(cards)
+      new(cards.map(&:to_sym))
+    end
+
     def initialize(cards = [])
       @cards = cards
+    end
+
+    def to_h
+      cards
     end
 
     def add(new_cards)

@@ -142,6 +142,7 @@ RSpec.describe BeanBazaar::Game do
 
       expect(calvin.coins).to eq(1)
       expect(deck.discard_pile).to eq(%i[blue blue blue])
+      expect(game.log.last).to eq("Calvin harvested 4 Blue for 1 coin")
     end
 
     it "discards the coins spent on a third field" do
@@ -193,6 +194,80 @@ RSpec.describe BeanBazaar::Game do
     game.end_trading
 
     expect(game).to be_over
+  end
+
+  describe "the game log" do
+    it "describes planting, flipping, trading and keeping" do
+      game.plant_from_hand(0)
+      game.flip_cards
+      game.trade(partner_index: 1, face_up_indexes: [ 0 ], partner_hand_indexes: [ 1 ])
+      game.trade(partner_index: 1, partner_hand_indexes: [ 0 ])
+      game.end_trading
+
+      expect(game.log).to eq([
+        "Calvin planted Blue",
+        "Calvin flipped Green and Stink",
+        "Calvin traded Green to Bot for Chili",
+        "Bot gave Wax to Calvin",
+        "Calvin kept Stink"
+      ])
+    end
+
+    it "describes gifts, harvests, field purchases and turn changes" do
+      game.plant_from_hand(0)
+      game.flip_cards
+      game.trade(partner_index: 1, face_up_indexes: [ 0, 1 ])
+      bot.pending.clear
+      calvin.coin_cards.concat(%i[red red red])
+      game.buy_third_field(player_index: 0)
+      game.harvest(player_index: 0, field_index: 0)
+      game.end_trading
+
+      expect(game.log.last(4)).to eq([
+        "Calvin gave Green and Stink to Bot",
+        "Calvin bought a third field",
+        "Calvin harvested 1 Blue for 0 coins",
+        "Bot's turn"
+      ])
+    end
+
+    it "rejects harvesting a field that doesn't exist" do
+      expect { game.harvest(player_index: 0, field_index: 5) }.to raise_error(BeanBazaar::IllegalMove, "There is no field 5")
+    end
+
+    it "keeps only the latest entries" do
+      long_game = described_class.new(players: [ calvin, bot ], deck: deck, log: Array.new(40) { |index| "Entry #{index}" })
+      long_game.plant_from_hand(0)
+
+      expect(long_game.log.size).to eq(40)
+      expect(long_game.log.last).to eq("Calvin planted Blue")
+    end
+
+    it "notes the end of the game, even when the flip finds no cards" do
+      game = described_class.new(players: [ calvin, bot ], deck: BeanBazaar::Deck.new(draw_pile: [], run_outs: 2))
+      game.plant_from_hand(0)
+      game.flip_cards
+
+      expect(game.log.last).to eq("The deck ran out for the third time. Game over!")
+      expect(game.log).not_to include(a_string_starting_with("Calvin flipped"))
+    end
+  end
+
+  describe "saving and loading" do
+    it "survives a JSON round trip mid-turn" do
+      game.plant_from_hand(0)
+      game.flip_cards
+      game.trade(partner_index: 1, face_up_indexes: [ 0 ])
+      calvin.coin_cards.concat(%i[red])
+      calvin.plant(:soy, 1)
+
+      loaded = described_class.from_h(JSON.parse(JSON.generate(game.to_h)))
+
+      expect(loaded.to_h).to eq(game.to_h)
+      expect(loaded.phase).to eq(:trade)
+      expect(loaded.players.last.pending).to eq(%i[green])
+      expect(loaded.players.first.fields.map(&:bean)).to eq([ :blue, :soy ])
+    end
   end
 
   it "only names winners once the game is over" do
