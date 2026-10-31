@@ -1,0 +1,68 @@
+:root {
+  --table: #2f2a26;
+  --table-light: #3d3630;
+  --panel: #f6ead0;
+  --panel-dark: #e8d7b2;
+  --ink: #2b1d14;
+  --gold: #f6c938;
+  --gold-dark: #b8860b;
+  --accent: #c6283a;
+  --muted: #8a7a66;
+  --ok: #3f8a3a;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  color: #f6efe3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, var(--table-light), var(--table) 70%);
+}
+
+h1, h2, h3 {
+  font-family: "Fraunces", serif;
+  font-weight: 900;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--ink);
+  transition: transform .1s ease;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); }
+button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.secondary { background: var(--panel); }
+button.small { padding: 3px 10px; font-size: 13px; }
+
+/* A card you can pick: a real button, so it works with the keyboard too. */
+.card-button {
+  all: unset;
+  cursor: pointer;
+  border-radius: 10px;
+}
+.card-button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.card-button:disabled { cursor: not-allowed; }
+
+/* Cards sliding in and out of hands and rows. */
+.deal-enter-active, .deal-leave-active { transition: all .25s ease; }
+.deal-enter-from { opacity: 0; transform: translateY(-16px) scale(.9); }
+.deal-leave-to { opacity: 0; transform: translateY(16px) scale(.9); }
+
+.panel {
+  background: var(--panel);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  padding: 12px;
+}
