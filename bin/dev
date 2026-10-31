@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Boots all dev processes (Rails API + Vite) from Procfile.dev.
+# Uses overmind (tmux-backed; attach to a process to debug it).
+echo
+echo "*** Starting app processes from Procfile.dev ***"
+echo
+
+cd "$(dirname "$0")/.." || exit 1
+exec overmind start -f Procfile.dev

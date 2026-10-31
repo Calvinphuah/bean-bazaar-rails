@@ -1,0 +1,2 @@
+# overmind's control socket while bin/dev runs
+.overmind.sock
