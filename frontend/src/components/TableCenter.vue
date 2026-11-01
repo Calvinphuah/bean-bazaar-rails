@@ -97,6 +97,7 @@ const deckStyle = computed(() => {
       </div>
       <div
         class="reshuffles"
+        data-tour="reshuffles"
         :title="`The game ends when the deck runs out for the ${MAX_RUN_OUTS}rd time`"
       >
         <span>Reshuffles</span>

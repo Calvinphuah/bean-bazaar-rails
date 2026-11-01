@@ -209,13 +209,11 @@ const youWon = computed(() => props.game.winners.includes(you.value))
       </div>
     </header>
 
-    <main
-      class="felt"
-      data-tour="seats"
-    >
+    <main class="felt">
       <BotSeat
         v-for="seat in seats"
         :key="seat.index"
+        data-tour="seats"
         :class="`spot-${seat.spot}`"
         :name="nameOf(seat.index)"
         :avatar="seat.avatar"
@@ -306,10 +304,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
           </div>
         </div>
 
-        <div
-          class="action"
-          data-tour="action"
-        >
+        <div class="action">
           <TradeBar
             v-if="isTrading"
             :gives="trade.gives.value"
@@ -533,10 +528,13 @@ const youWon = computed(() => props.game.winners.includes(you.value))
       </div>
     </Transition>
 
-    <TutorialGuide
-      v-if="showTutorial"
-      @close="emit('tutorialDone')"
-    />
+    <!-- Outside the zoomed table, so the highlight lines up with what it measures. -->
+    <Teleport to="body">
+      <TutorialGuide
+        v-if="showTutorial"
+        @close="emit('tutorialDone')"
+      />
+    </Teleport>
   </div>
 </template>
 
