@@ -9,6 +9,10 @@ const props = withDefaults(defineProps<{
   highlighted?: boolean
 }>(), { size: "small", selected: false, highlighted: false })
 
+// Shrinking the 480px art ~5x in the browser looks soft, so every size but
+// full uses a copy pre-shrunk and sharpened to 240px (sharp on 2x screens too).
+const artSrc = computed(() => `/cards/${props.bean.key}${props.size === "full" ? "" : "-240"}.webp`)
+
 // Coin stacks for 1..4 coins, skipping steps this bean doesn't pay.
 const stacks = computed(() =>
   [1, 2, 3, 4].flatMap((coins) => {
@@ -25,7 +29,7 @@ const stacks = computed(() =>
   >
     <div class="art">
       <img
-        :src="`/cards/${bean.key}.webp`"
+        :src="artSrc"
         :alt="`${bean.name} Bean`"
         draggable="false"
       >

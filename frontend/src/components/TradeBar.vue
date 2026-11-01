@@ -52,7 +52,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
         >
           <img
             class="chip"
-            :src="`/cards/${group.bean}.webp`"
+            :src="`/cards/${group.bean}-240.webp`"
             alt=""
           >
           <span
@@ -83,7 +83,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           @mouseleave="emit('point', null)"
         >
           <img
-            :src="`/cards/${bean.key}.webp`"
+            :src="`/cards/${bean.key}-240.webp`"
             alt=""
           >
           <span class="ask-name">{{ bean.name }}</span>
