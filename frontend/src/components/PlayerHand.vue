@@ -19,7 +19,8 @@ const props = defineProps<{
   picked: number[]
 }>()
 
-const emit = defineEmits<{ pick: [index: number] }>()
+// point: the bean under the pointer, so the table can show it big; null when it leaves.
+const emit = defineEmits<{ pick: [index: number]; point: [bean: BeanKey | null] }>()
 
 // localStorage can throw in private windows; then the hand just starts front-left.
 function savedFrontOnRight(): boolean {
@@ -66,14 +67,6 @@ function tiltStyle(position: number): Record<string, string> {
   return { transform: `rotate(${offset * tilt.value}deg) translateY(${Math.abs(offset) * tilt.value}px)` }
 }
 
-// The hand card under the pointer, shown big with its coin row in the corner.
-const pointedAt = ref<number | null>(null)
-const pointedBean = computed(() => {
-  const bean = pointedAt.value === null ? undefined : props.hand[pointedAt.value]
-  return bean ? props.beanTypes[bean] : undefined
-})
-const pointedCopies = computed(() => props.hand.filter((bean) => bean === pointedBean.value?.key).length)
-
 // The front card is being dragged, so its "Plant next" tag and glow step aside.
 const dragging = ref(false)
 
@@ -92,6 +85,7 @@ function onDragStart(event: DragEvent): void {
     requestAnimationFrame(() => ghost.remove())
   }
   dragging.value = true
+  emit("point", null)
 }
 </script>
 
@@ -119,8 +113,8 @@ function onDragStart(event: DragEvent): void {
             class="slot"
             :class="{ front: index === 0, dragging: index === 0 && dragging }"
             :style="slotStyle(position)"
-            @mouseenter="pointedAt = index"
-            @mouseleave="pointedAt = null"
+            @mouseenter="!dragging && emit('point', bean)"
+            @mouseleave="emit('point', null)"
           >
             <div
               class="tilt"
@@ -162,19 +156,6 @@ function onDragStart(event: DragEvent): void {
         </template>
       </TransitionGroup>
     </div>
-    <Transition name="peek">
-      <div
-        v-if="pointedBean && !dragging"
-        class="preview"
-        aria-hidden="true"
-      >
-        <BeanCard
-          :bean="pointedBean"
-          size="full"
-        />
-        <p>{{ pointedCopies }} in your hand</p>
-      </div>
-    </Transition>
     <span
       v-if="!hand.length"
       class="empty"
@@ -209,19 +190,6 @@ function onDragStart(event: DragEvent): void {
 .next.waiting { background: var(--panel-dark); color: var(--ink); }
 .grabbable { cursor: grab; }
 .grabbable:active { cursor: grabbing; }
-.preview {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 70;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-.preview p { margin: 0; color: var(--ink); padding: 2px 10px; border-radius: 999px; background: var(--panel); border: 2px solid var(--ink); font-size: 12px; font-weight: 800; }
-.peek-enter-active, .peek-leave-active { transition: opacity .15s ease, transform .15s ease; }
-.peek-enter-from, .peek-leave-to { opacity: 0; transform: translateY(12px); }
 /* The card left behind fades while its copy is carried to a field. */
 .slot.dragging { opacity: .45; }
 .slot.dragging .next { visibility: hidden; }

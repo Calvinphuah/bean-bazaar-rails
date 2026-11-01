@@ -37,6 +37,8 @@ const SEAT_SPOTS: Record<number, string[]> = {
 const showLog = ref(false)
 const showPayouts = ref(false)
 const pickedPending = ref<number | null>(null)
+// The bean under the pointer in your hand or the trade bar, shown big with its coin row.
+const pointedBean = ref<BeanKey | null>(null)
 
 const beanTypes = computed<Record<string, BeanType>>(() =>
   Object.fromEntries(props.game.bean_types.map((bean) => [bean.key, bean])),
@@ -46,6 +48,8 @@ const me = computed(() => props.game.players[you.value])
 const myTable = computed(() => props.table.players[you.value])
 const hand = computed<BeanKey[]>(() => me.value?.hand ?? [])
 const frontCard = computed(() => hand.value[0] ?? null)
+const pointedType = computed(() => (pointedBean.value ? beanTypes.value[pointedBean.value] : undefined))
+const pointedCopies = computed(() => hand.value.filter((bean) => bean === pointedBean.value).length)
 const myFields = computed<FieldState[]>(() => myTable.value?.fields ?? [])
 
 const seats = computed(() => {
@@ -293,6 +297,8 @@ const youWon = computed(() => props.game.winners.includes(you.value))
             :status="trade.status.value"
             :busy="busy"
             @ask="trade.changeAsk"
+            @remove="trade.removeGive"
+            @point="pointedBean = $event"
             @clear="trade.clear"
             @done="move({ type: 'end_trading' })"
           />
@@ -400,8 +406,23 @@ const youWon = computed(() => props.game.winners.includes(you.value))
         :pickable="isTrading"
         :picked="trade.pickedHand.value"
         @pick="trade.toggleHand"
+        @point="pointedBean = $event"
       />
     </section>
+
+    <Transition name="peek">
+      <div
+        v-if="pointedType"
+        class="preview"
+        aria-hidden="true"
+      >
+        <BeanCard
+          :bean="pointedType"
+          size="full"
+        />
+        <p>{{ pointedCopies }} in your hand</p>
+      </div>
+    </Transition>
 
     <Transition name="slide">
       <div
@@ -595,6 +616,19 @@ button.big { font-size: 17px; padding: 9px 22px; }
   box-shadow: 0 6px 14px rgba(0, 0, 0, .3);
 }
 
+.preview {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 70;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.preview p { margin: 0; color: var(--ink); padding: 2px 10px; border-radius: 999px; background: var(--panel); border: 2px solid var(--ink); font-size: 12px; font-weight: 800; }
+.peek-enter-active, .peek-leave-active { transition: opacity .15s ease, transform .15s ease; }
+.peek-enter-from, .peek-leave-to { opacity: 0; transform: translateY(12px); }
 .log-spot { position: fixed; right: 16px; top: 60px; z-index: 20; }
 .overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(20, 14, 10, .72); }
 .payouts { width: min(980px, 100%); max-height: 90vh; overflow-y: auto; display: grid; gap: 12px; padding: 20px; }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue"
-import type { BeanKey, BeanType } from "../types"
+import type { BeanKey, BeanType, TradeGive } from "../types"
 
 const props = defineProps<{
-  gives: BeanKey[]
+  gives: TradeGive[]
   // Beans asked for, with how many of each.
   asks: Record<BeanKey, number>
   beanTypes: Record<string, BeanType>
@@ -11,7 +11,14 @@ const props = defineProps<{
   busy: boolean
 }>()
 
-const emit = defineEmits<{ ask: [bean: BeanKey, change: number]; clear: []; done: [] }>()
+// point: the bean under the pointer, so the table can show it big; null when it leaves.
+const emit = defineEmits<{
+  ask: [bean: BeanKey, change: number]
+  remove: [give: TradeGive]
+  point: [bean: BeanKey | null]
+  clear: []
+  done: []
+}>()
 
 const beans = computed(() => Object.values(props.beanTypes))
 const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks).length > 0)
@@ -23,16 +30,24 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
     data-tour="trade"
   >
     <div class="section">
-      <h3>You give</h3>
+      <h3>You give <span class="hint">(click to take back)</span></h3>
       <div class="chips">
-        <img
-          v-for="(bean, index) in gives"
-          :key="`${bean}-${index}`"
-          class="chip"
-          :src="`/cards/${bean}.webp`"
-          :alt="beanTypes[bean]?.name"
-          :title="beanTypes[bean]?.name"
+        <button
+          v-for="give in gives"
+          :key="`${give.source}-${give.index}`"
+          class="chip-button card-button"
+          :title="`Take back ${beanTypes[give.bean]?.name} Bean`"
+          :aria-label="`Take back ${beanTypes[give.bean]?.name} Bean`"
+          @click="emit('remove', give)"
+          @mouseenter="emit('point', give.bean)"
+          @mouseleave="emit('point', null)"
         >
+          <img
+            class="chip"
+            :src="`/cards/${give.bean}.webp`"
+            alt=""
+          >
+        </button>
         <span
           v-if="!gives.length"
           class="hint"
@@ -52,6 +67,8 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           :aria-label="`Ask for a ${bean.name} bean${asks[bean.key] ? `, ${asks[bean.key]} asked` : ''}`"
           @click="emit('ask', bean.key, 1)"
           @contextmenu.prevent="emit('ask', bean.key, -1)"
+          @mouseenter="emit('point', bean.key)"
+          @mouseleave="emit('point', null)"
         >
           <img
             :src="`/cards/${bean.key}.webp`"
@@ -99,7 +116,9 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
 h3 { font-size: 14px; }
 .hint { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
 .chips { display: flex; gap: 4px; min-height: 42px; align-items: center; flex-wrap: wrap; }
-.chip { width: 30px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 4px; border: 2px solid var(--ink); }
+.chip-button { position: relative; transition: transform .15s ease; }
+.chip-button:hover { transform: translateY(-2px); }
+.chip { display: block; width: 30px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 4px; border: 2px solid var(--ink); }
 .asks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
 .ask { position: relative; display: grid; justify-items: center; gap: 2px; padding: 3px; border-radius: 8px; transition: background .15s ease; }
 .ask:hover { background: var(--panel-dark); }

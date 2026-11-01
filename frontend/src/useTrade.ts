@@ -1,6 +1,6 @@
 import { computed, ref, watch, type Ref } from "vue"
 import { quoteTrade, type QuoteAnswer } from "./api"
-import type { BeanKey, GameState, Move } from "./types"
+import type { BeanKey, GameState, Move, TradeGive } from "./types"
 
 const QUOTE_DELAY_MS = 250
 
@@ -18,9 +18,15 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
 
   const hand = computed<BeanKey[]>(() => (game.value ? game.value.players[game.value.you]?.hand ?? [] : []))
   const askList = computed(() => Object.entries(asks.value).flatMap(([bean, count]) => Array<BeanKey>(count).fill(bean)))
-  const gives = computed(() => [
-    ...pickedFaceUp.value.flatMap((index) => game.value?.face_up[index] ?? []),
-    ...pickedHand.value.flatMap((index) => hand.value[index] ?? []),
+  const gives = computed<TradeGive[]>(() => [
+    ...pickedFaceUp.value.flatMap((index) => {
+      const bean = game.value?.face_up[index]
+      return bean ? [{ bean, source: "face_up" as const, index }] : []
+    }),
+    ...pickedHand.value.flatMap((index) => {
+      const bean = hand.value[index]
+      return bean ? [{ bean, source: "hand" as const, index }] : []
+    }),
   ])
   const hasOffer = computed(() => gives.value.length + askList.value.length > 0)
   const acceptors = computed(() =>
@@ -110,6 +116,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     acceptors,
     toggleFaceUp: (index: number) => toggle(pickedFaceUp, index),
     toggleHand: (index: number) => toggle(pickedHand, index),
+    removeGive: (give: TradeGive) => toggle(give.source === "face_up" ? pickedFaceUp : pickedHand, give.index),
     changeAsk,
     clear,
     tradeWith,

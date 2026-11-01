@@ -75,6 +75,9 @@ export interface GameState {
   bean_types: BeanType[]
 }
 
+// A card you've picked to give in a trade, and where it came from.
+export interface TradeGive { bean: BeanKey; source: "face_up" | "hand"; index: number }
+
 export interface TradeOffer {
   partner_index: number
   face_up_indexes: number[]
