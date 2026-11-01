@@ -109,6 +109,25 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
     await tradeWith(player)
   }
 
+  // Picks waiting for the bid to open: the bot's turned-down offer replays first,
+  // and the trade resets when it ends, so they are applied after that.
+  let queuedPicks: BeanKey[] | null = null
+
+  // Starts a bid with the bot's own offer picked: its face-up cards to get, and
+  // any of its hand beans as asks. You only add what you give.
+  function preselect(beans: BeanKey[]): void {
+    const faceUp = game.value?.face_up ?? []
+    const picked: number[] = []
+    const rest: BeanKey[] = []
+    beans.forEach((bean) => {
+      const index = faceUp.findIndex((card, at) => card === bean && !picked.includes(at))
+      if (index === -1) rest.push(bean)
+      else picked.push(index)
+    })
+    pickedFaceUp.value = picked
+    asks.value = rest.reduce<Record<BeanKey, number>>((all, bean) => ({ ...all, [bean]: (all[bean] ?? 0) + 1 }), {})
+  }
+
   async function refreshQuote(): Promise<void> {
     const current = game.value
     if (!current || !isTrading.value || !hasOffer.value) {
@@ -145,7 +164,12 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
   })
 
   // Cards move after every trade, so old picks would point at the wrong cards.
-  watch(() => [game.value?.face_up.length, hand.value.length, isTrading.value], clear)
+  watch(() => [game.value?.face_up.length, hand.value.length, isTrading.value], () => {
+    clear()
+    if (!isTrading.value || !queuedPicks) return
+    preselect(queuedPicks)
+    queuedPicks = null
+  })
 
   async function tradeWith(partner: number): Promise<void> {
     const picks = { face_up_indexes: pickedFaceUp.value, hand_indexes: pickedHand.value, partner_beans: askList.value }
@@ -169,6 +193,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
     changeAsk,
     clear,
     takeCounter,
+    queuePicks: (beans: BeanKey[] | null) => { queuedPicks = beans },
     tradeWith,
   }
 }

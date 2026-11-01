@@ -71,13 +71,15 @@ const canGiveAny = computed(() => props.offer.choices.some((bean) => props.hand.
             class="choice"
             :disabled="busy || !hand.includes(bean)"
             :title="hand.includes(bean) ? '' : `You have no ${beanTypes[bean]?.name ?? bean}`"
+            :aria-label="`Give ${beanTypes[bean]?.name ?? bean}`"
             @click="emit('accept', bean)"
           >
             <BeanCard
               v-if="beanTypes[bean]"
               :bean="beanTypes[bean]!"
             />
-            <span class="give">Give {{ beanTypes[bean]?.name ?? bean }}</span>
+            <!-- The card above names the bean, so the button stays one short word. -->
+            <span class="give">Give</span>
           </button>
         </div>
       </div>

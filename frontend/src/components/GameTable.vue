@@ -161,6 +161,13 @@ function bubbleFor(index: number): string | null {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
+// Making your own offer starts from the bot's: what it was giving you is
+// already picked once the bid opens.
+async function bidOn(beans: BeanKey[]): Promise<void> {
+  trade.queuePicks(beans)
+  if (!(await props.move({ type: "open_bids" }))) trade.queuePicks(null)
+}
+
 function plantLabel(field: FieldState): string | null {
   if (canPlantFromHand.value && frontCard.value && accepts(field, frontCard.value)) return `Plant ${beanName(frontCard.value)}`
   if (live.value && pendingCard.value && accepts(field, pendingCard.value)) return `Plant ${beanName(pendingCard.value)}`
@@ -395,7 +402,7 @@ function ordinal(place: number): string {
             :busy="busy"
             @accept="(bean) => move(bean ? { type: 'accept_offer', bean } : { type: 'accept_offer' })"
             @decline="move({ type: 'decline_offer' })"
-            @bid="move({ type: 'open_bids' })"
+            @bid="bidOn(offer.give)"
           />
           <TradeBar
             v-else-if="isDealing"

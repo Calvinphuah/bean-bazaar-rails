@@ -186,11 +186,11 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
                 :src="`/cards/${bean}-240.webp`"
                 :alt="beanTypes[bean]?.name ?? bean"
               >
-              <!-- An empty side keeps the box's shape and names the deal a gift. -->
+              <!-- An empty side keeps the box's shape and says plainly that nothing comes back. -->
               <span
                 v-if="!dealSide.beans.length"
                 class="chip empty"
-              >Gift</span>
+              >Nothing</span>
             </div>
           </div>
         </div>
@@ -389,7 +389,7 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
 .deal-side { display: grid; justify-items: center; gap: 3px; font-size: 11px; color: var(--muted); }
 .chips { display: flex; gap: 3px; min-height: 30px; align-items: center; }
 .chip { width: 26px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 3px; border: 1.5px solid var(--ink); }
-.chip.empty { display: grid; place-items: center; border-style: dashed; border-color: var(--muted); font-size: 8px; font-weight: 800; color: var(--muted); }
+.chip.empty { width: auto; min-width: 26px; padding: 0 3px; display: grid; place-items: center; border-style: dashed; border-color: var(--muted); font-size: 8px; font-weight: 800; color: var(--muted); }
 
 .pop-enter-active, .pop-leave-active { transition: all .2s ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.92); }

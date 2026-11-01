@@ -33,7 +33,13 @@ function grouped(cards: TradeGive[]) {
 }
 // While bidding, picked face-up cards are the bot's, so they go under You get.
 const giveGroups = computed(() => grouped(props.bidWith ? props.gives.filter((give) => give.source === "hand") : props.gives))
-const takeGroups = computed(() => grouped(props.bidWith ? props.gives.filter((give) => give.source === "face_up") : []))
+// What you get, per bean: beans asked for plus, while bidding, the bot's
+// face-up cards you picked, so both light up the same way in one row.
+const getCounts = computed(() => {
+  const counts: Record<BeanKey, number> = { ...props.asks }
+  if (props.bidWith) props.gives.filter((give) => give.source === "face_up").forEach((give) => { counts[give.bean] = (counts[give.bean] ?? 0) + 1 })
+  return counts
+})
 const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks).length > 0)
 </script>
 
@@ -67,7 +73,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           >{{ group.cards.length }}</span>
         </button>
         <span
-          v-if="!gives.length"
+          v-if="!giveGroups.length"
           class="hint"
         >{{ bidWith ? "Pick cards from your hand" : "Pick cards from the table or your hand" }}</span>
       </div>
@@ -75,36 +81,14 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
 
     <div class="section">
       <h3>{{ bidWith ? `You get from ${bidWith}` : "You get" }}</h3>
-      <div
-        v-if="takeGroups.length"
-        class="chips"
-      >
-        <button
-          v-for="group in takeGroups"
-          :key="group.bean"
-          class="chip-button card-button"
-          :title="`Put back ${bidWith}'s ${beanTypes[group.bean]?.name} Bean`"
-          @click="emit('remove', group.last)"
-        >
-          <img
-            class="chip"
-            :src="`/cards/${group.bean}-240.webp`"
-            alt=""
-          >
-          <span
-            v-if="group.cards.length > 1"
-            class="ask-count"
-          >{{ group.cards.length }}</span>
-        </button>
-      </div>
       <div class="asks">
         <button
           v-for="bean in beans"
           :key="bean.key"
           class="ask card-button"
-          :class="{ chosen: (asks[bean.key] ?? 0) > 0 }"
+          :class="{ chosen: (getCounts[bean.key] ?? 0) > 0 }"
           :title="`${bean.name} Bean: right-click to ask for one less`"
-          :aria-label="`Ask for a ${bean.name} bean${asks[bean.key] ? `, ${asks[bean.key]} asked` : ''}`"
+          :aria-label="`Ask for a ${bean.name} bean${getCounts[bean.key] ? `, ${getCounts[bean.key]} asked` : ''}`"
           @click="emit('ask', bean.key, 1)"
           @contextmenu.prevent="emit('ask', bean.key, -1)"
           @mouseenter="emit('point', bean.key)"
@@ -116,9 +100,9 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           >
           <span class="ask-name">{{ bean.name }}</span>
           <span
-            v-if="asks[bean.key]"
+            v-if="getCounts[bean.key]"
             class="ask-count"
-          >{{ asks[bean.key] }}</span>
+          >{{ getCounts[bean.key] }}</span>
         </button>
       </div>
     </div>
