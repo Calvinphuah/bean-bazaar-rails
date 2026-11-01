@@ -158,14 +158,18 @@ const deckStyle = computed(() => {
   right: -9px;
   z-index: 2;
   min-width: 28px;
-  padding: 2px 6px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
   border-radius: 999px;
   border: 2px solid var(--ink);
   background: var(--panel);
   color: var(--ink);
   font-size: 13px;
   font-weight: 800;
-  text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
   box-shadow: 0 2px 0 var(--ink);
 }
 .reshuffles { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }

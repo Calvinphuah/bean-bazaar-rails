@@ -129,14 +129,18 @@ function onDrop(): void {
   top: -9px;
   right: -11px;
   min-width: 28px;
-  text-align: center;
+  height: 28px;
+  display: grid;
+  place-items: center;
   background: var(--accent);
   color: #fff;
   font-weight: 800;
   font-size: 15px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
   border: 2px solid var(--ink);
   border-radius: 999px;
-  padding: 1px 6px;
+  padding: 0 6px;
 }
 .placeholder {
   width: 92px;

@@ -211,11 +211,15 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   top: -6px;
   right: -6px;
   min-width: 20px;
-  text-align: center;
+  height: 20px;
+  display: grid;
+  place-items: center;
   background: var(--accent);
   color: #fff;
   font-size: 11px;
   font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
   border: 2px solid var(--ink);
   border-radius: 999px;
   padding: 0 4px;
