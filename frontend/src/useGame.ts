@@ -1,8 +1,14 @@
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { loadGame, sendMove, startGame } from "./api"
-import type { GameState, Move } from "./types"
+import { tableOf } from "./rules"
+import type { BotLevel, GameState, LogEvent, Move, TableSnapshot } from "./types"
 
 const STORAGE_KEY = "bean-bazaar-game-id"
+
+// How long each replayed move stays on screen, by who made it and what it was.
+const BOT_STEP_MS = 900
+const FLIP_STEP_MS = 1100
+const OWN_STEP_MS = 220
 
 // localStorage can throw in private windows; resuming is only a convenience.
 function savedId(): number | null {
@@ -27,45 +33,90 @@ export function useGame() {
   const game = ref<GameState | null>(null)
   const error = ref<string | null>(null)
   const busy = ref(false)
+  // The move being replayed right now; null when the table shows the live state.
+  const replaying = ref<LogEvent | null>(null)
 
-  async function run(action: () => Promise<GameState>): Promise<void> {
+  let lastSeq = 0
+  let queue: LogEvent[] = []
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  const table = computed<TableSnapshot | null>(() =>
+    replaying.value ? replaying.value.table : game.value ? tableOf(game.value) : null,
+  )
+
+  function stepDuration(event: LogEvent): number {
+    if (event.player === game.value?.you) return OWN_STEP_MS
+    return event.type === "flip" ? FLIP_STEP_MS : BOT_STEP_MS
+  }
+
+  function playNext(): void {
+    const next = queue.shift()
+    replaying.value = next ?? null
+    timer = next ? setTimeout(playNext, stepDuration(next)) : null
+  }
+
+  function skipReplay(): void {
+    if (timer) clearTimeout(timer)
+    timer = null
+    queue = []
+    replaying.value = null
+  }
+
+  // Shows the new state, replaying the moves made since the last one we saw.
+  function absorb(next: GameState, replay: boolean): void {
+    const fresh = next.log.filter((event) => event.seq > lastSeq)
+    lastSeq = next.log[next.log.length - 1]?.seq ?? lastSeq
+    game.value = next
+    saveId(next.id)
+    skipReplay()
+    if (!replay) return
+
+    queue = fresh
+    playNext()
+  }
+
+  async function run(action: () => Promise<GameState>, replay: boolean): Promise<boolean> {
     busy.value = true
     error.value = null
     try {
-      game.value = await action()
-      saveId(game.value.id)
+      absorb(await action(), replay)
+      return true
     } catch (caught) {
       error.value = caught instanceof Error ? caught.message : String(caught)
+      return false
     } finally {
       busy.value = false
     }
   }
 
-  function start(botCount: number): Promise<void> {
-    return run(() => startGame(botCount))
+  function start(botCount: number, botLevel: BotLevel): Promise<boolean> {
+    lastSeq = 0
+    return run(() => startGame(botCount, botLevel), false)
   }
 
-  async function move(next: Move): Promise<void> {
+  async function move(next: Move): Promise<boolean> {
     const current = game.value
-    if (current === null) return
-    await run(() => sendMove(current.id, next))
+    if (current === null) return false
+    return run(() => sendMove(current.id, next), true)
   }
 
   async function resume(): Promise<void> {
     const id = savedId()
     if (id === null) return
-    await run(() => loadGame(id))
-    if (game.value === null) {
+    const loaded = await run(() => loadGame(id), false)
+    if (!loaded) {
       saveId(null)
       error.value = null
     }
   }
 
   function leave(): void {
+    skipReplay()
     game.value = null
     error.value = null
+    lastSeq = 0
     saveId(null)
   }
 
-  return { game, error, busy, start, move, resume, leave }
+  return { game, table, error, busy, replaying, start, move, resume, leave, skipReplay }
 }

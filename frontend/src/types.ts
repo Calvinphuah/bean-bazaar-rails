@@ -1,7 +1,9 @@
-// Mirrors GameSerializer#as_json in the Rails API.
+// Mirrors Api::GameSerializer#as_json in the Rails API.
 export type BeanKey = string
 
 export type Phase = "plant" | "trade" | "plant_pending" | "over"
+
+export type BotLevel = "easy" | "smart"
 
 export interface BeanType {
   key: BeanKey
@@ -14,7 +16,6 @@ export interface BeanType {
 export interface FieldState {
   bean: BeanKey | null
   count: number
-  coins: number
 }
 
 export interface PlayerState {
@@ -25,6 +26,33 @@ export interface PlayerState {
   fields: FieldState[]
   coins: number
   pending: BeanKey[]
+}
+
+// What everyone can see at one moment; every log event carries one.
+export interface TableSnapshot {
+  phase: Phase
+  active_index: number
+  deck: { draw: number; discard: number; run_outs: number }
+  face_up: BeanKey[]
+  players: { hand_size: number; coins: number; fields: FieldState[]; pending: BeanKey[] }[]
+}
+
+export type EventType =
+  | "plant" | "flip" | "trade" | "offer" | "decline" | "keep" | "harvest" | "buy_field" | "turn" | "game_over"
+
+export interface LogEvent {
+  seq: number
+  type: EventType
+  player: number | null
+  text: string
+  table: TableSnapshot
+}
+
+// A bot's offer waiting for you: it gives `give`, asks for `ask` from your hand.
+export interface Offer {
+  from: number
+  give: BeanKey[]
+  ask: BeanKey[]
 }
 
 export interface GameState {
@@ -38,8 +66,9 @@ export interface GameState {
   deck: { draw: number; discard: number; run_outs: number }
   face_up: BeanKey[]
   players: PlayerState[]
-  // Newest last; the server keeps the latest 40 entries.
-  log: string[]
+  offer: Offer | null
+  bot_level: BotLevel
+  log: LogEvent[]
   bean_types: BeanType[]
 }
 
@@ -55,6 +84,8 @@ export type Move =
   | { type: "flip_cards" }
   | { type: "end_trading" }
   | { type: "buy_third_field" }
+  | { type: "accept_offer" }
+  | { type: "decline_offer" }
   | { type: "plant_pending"; pending_index: number; field_index: number }
   | { type: "harvest"; field_index: number }
   | ({ type: "trade" } & TradeOffer)

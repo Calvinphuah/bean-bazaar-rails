@@ -1,32 +1,42 @@
 <script setup lang="ts">
 import { computed } from "vue"
+import type { LogEvent } from "../types"
 
 const props = defineProps<{
-  entries: string[]
+  entries: LogEvent[]
   you: string
 }>()
 
-// Newest first, so the latest bot moves are visible without scrolling. The
-// engine names every seat the same way, so "You's turn" is reworded here.
-const newestFirst = computed(() =>
-  [ ...props.entries ].reverse().map((entry) => (entry === `${props.you}'s turn` ? "Your turn" : entry)),
-)
+const emit = defineEmits<{ close: [] }>()
 
-function isTurnChange(entry: string): boolean {
-  return entry.endsWith("'s turn") || entry === "Your turn" || entry.includes("Game over")
-}
+// Newest first. The engine names every seat the same way, so "You's turn" is reworded here.
+const newestFirst = computed(() =>
+  [...props.entries].reverse().map((entry) => ({
+    ...entry,
+    text: entry.text === `${props.you}'s turn` ? "Your turn" : entry.text,
+  })),
+)
 </script>
 
 <template>
   <aside class="panel log">
-    <h3>Game log</h3>
+    <div class="header">
+      <h3>Game log</h3>
+      <button
+        class="small secondary"
+        aria-label="Close the log"
+        @click="emit('close')"
+      >
+        ✕
+      </button>
+    </div>
     <ol aria-live="polite">
       <li
-        v-for="(entry, index) in newestFirst"
-        :key="entries.length - index"
-        :class="{ turn: isTurnChange(entry), mine: entry.startsWith(you) || entry === 'Your turn' }"
+        v-for="entry in newestFirst"
+        :key="entry.seq"
+        :class="[entry.type, { mine: entry.text.startsWith(you) || entry.text === 'Your turn' }]"
       >
-        {{ entry }}
+        {{ entry.text }}
       </li>
       <li
         v-if="!entries.length"
@@ -39,10 +49,13 @@ function isTurnChange(entry: string): boolean {
 </template>
 
 <style scoped>
-.log { display: flex; flex-direction: column; gap: 8px; max-height: 520px; }
-ol { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 4px; font-size: 13px; }
+.log { width: 300px; max-height: 70vh; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 18px 40px rgba(0, 0, 0, .55); }
+.header { display: flex; justify-content: space-between; align-items: center; }
+ol { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: grid; gap: 3px; font-size: 13px; }
 li { padding: 3px 6px; border-radius: 6px; line-height: 1.35; }
-li.turn { font-weight: 800; background: var(--panel-dark); margin-top: 6px; }
+li.turn, li.game_over { font-weight: 800; background: var(--panel-dark); margin-top: 6px; }
+li.harvest { color: var(--ok); }
+li.offer, li.trade { color: #6a3a8c; }
 li.mine { color: var(--accent); font-weight: 700; }
 .muted { color: var(--muted); }
 </style>

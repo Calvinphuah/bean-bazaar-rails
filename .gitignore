@@ -1,2 +1,5 @@
 # overmind's control socket while bin/dev runs
 .overmind.sock
+
+# Browser test logs from Playwright
+.playwright-mcp/

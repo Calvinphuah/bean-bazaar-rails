@@ -4,16 +4,16 @@ import type { BeanType } from "../types"
 
 const props = withDefaults(defineProps<{
   bean: BeanType
-  size?: "full" | "small"
+  size?: "mini" | "small" | "medium" | "large" | "full"
   selected?: boolean
   highlighted?: boolean
 }>(), { size: "small", selected: false, highlighted: false })
 
 // Coin stacks for 1..4 coins, skipping steps this bean doesn't pay.
 const stacks = computed(() =>
-  [ 1, 2, 3, 4 ].flatMap((coins) => {
+  [1, 2, 3, 4].flatMap((coins) => {
     const beans = props.bean.meter[String(coins)]
-    return beans === undefined ? [] : [ { coins, beans } ]
+    return beans === undefined ? [] : [{ coins, beans }]
   }),
 )
 </script>
@@ -27,16 +27,23 @@ const stacks = computed(() =>
       <img
         :src="`/cards/${bean.key}.webp`"
         :alt="`${bean.name} Bean`"
+        draggable="false"
       >
-      <div class="name">
+      <div
+        v-if="size !== 'mini'"
+        class="name"
+      >
         {{ bean.name }} Bean
       </div>
-      <div class="count">
+      <div
+        v-if="size !== 'mini'"
+        class="count"
+      >
         {{ bean.copies }}
       </div>
     </div>
     <div
-      v-if="size === 'full'"
+      v-if="size === 'full' || size === 'medium'"
       class="meter"
     >
       <div
@@ -50,7 +57,8 @@ const stacks = computed(() =>
             :key="coin"
             src="/cards/coin.webp"
             alt=""
-            :style="{ bottom: `${(coin - 1) * 6}px` }"
+            draggable="false"
+            :style="{ bottom: `${(coin - 1) * 4}px` }"
           >
         </div>
         <div class="beans">
@@ -65,17 +73,21 @@ const stacks = computed(() =>
 .card {
   aspect-ratio: 63 / 88;
   background: #fff;
-  border-radius: 10px;
-  padding: 4px;
+  border-radius: 9px;
+  padding: 3px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .7);
-  transition: transform .15s ease, box-shadow .15s ease;
+  box-shadow: 0 6px 12px -6px rgba(0, 0, 0, .75);
+  transition: transform .18s ease, box-shadow .18s ease;
+  user-select: none;
 }
-.card.small { width: 84px; }
+.card.mini { width: 38px; border-radius: 5px; padding: 2px; }
+.card.small { width: 92px; }
+.card.medium { width: 112px; padding: 4px; }
+.card.large { width: 132px; padding: 4px; border-radius: 11px; }
 .card.full { width: 190px; padding: 6px; border-radius: 14px; }
-.card.selected { transform: translateY(-10px); box-shadow: 0 0 0 3px var(--gold), 0 10px 18px -8px rgba(0, 0, 0, .8); }
-.card.highlighted { box-shadow: 0 0 0 3px var(--accent), 0 6px 14px -8px rgba(0, 0, 0, .7); }
+.card.selected { transform: translateY(-12px); box-shadow: 0 0 0 4px var(--gold), 0 12px 20px -8px rgba(0, 0, 0, .85); }
+.card.highlighted { box-shadow: 0 0 0 4px var(--accent), 0 0 24px 4px rgba(246, 201, 56, .55); }
 
 .art {
   position: relative;
@@ -84,6 +96,7 @@ const stacks = computed(() =>
   border-radius: 6px;
   overflow: hidden;
 }
+.mini .art { border-width: 1px; border-radius: 3px; }
 .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 .name, .count {
@@ -95,8 +108,12 @@ const stacks = computed(() =>
   paint-order: stroke fill;
   line-height: 1;
 }
-.name { top: 4px; left: 5px; right: 5px; font-size: 9px; text-transform: uppercase; }
-.count { bottom: 4px; right: 5px; font-size: 18px; }
+.name { top: 5px; left: 5px; right: 5px; font-size: 10px; text-transform: uppercase; }
+.count { bottom: 4px; right: 6px; font-size: 20px; }
+.medium .name { font-size: 11px; }
+.medium .count { font-size: 22px; }
+.large .name { font-size: 12px; top: 7px; left: 7px; }
+.large .count { font-size: 26px; -webkit-text-stroke-width: 4px; }
 .full .name { font-size: 15px; top: 7px; left: 8px; -webkit-text-stroke-width: 4px; }
 .full .count { font-size: 32px; bottom: 6px; right: 9px; -webkit-text-stroke-width: 5px; }
 
@@ -104,14 +121,18 @@ const stacks = computed(() =>
   display: flex;
   justify-content: space-evenly;
   align-items: flex-end;
-  margin-top: 5px;
-  padding: 4px 2px 3px;
+  margin-top: 3px;
+  padding: 2px 1px;
   border: 2px solid var(--ink);
-  border-radius: 4px 4px 8px 8px;
+  border-radius: 3px 3px 6px 6px;
   background: var(--panel);
 }
-.slot { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 25%; }
-.stack { position: relative; width: 26px; height: 40px; }
-.stack img { position: absolute; left: 0; width: 26px; }
-.beans { font-family: "Fraunces", serif; font-weight: 900; font-size: 14px; line-height: 1; color: var(--ink); }
+.slot { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 25%; }
+.stack { position: relative; width: 16px; height: 24px; }
+.stack img { position: absolute; left: 0; width: 16px; }
+.beans { font-family: "Fraunces", serif; font-weight: 900; font-size: 10px; line-height: 1; color: var(--ink); }
+.full .meter { margin-top: 5px; padding: 4px 2px 3px; }
+.full .stack { width: 26px; height: 40px; }
+.full .stack img { width: 26px; }
+.full .beans { font-size: 14px; }
 </style>
