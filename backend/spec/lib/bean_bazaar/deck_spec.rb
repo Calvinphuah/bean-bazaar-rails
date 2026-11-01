@@ -36,6 +36,14 @@ RSpec.describe BeanBazaar::Deck do
     end
   end
 
+  describe '#summary' do
+    it 'shows the pile sizes and only the top of the discard pile' do
+      deck = described_class.new(draw_pile: %i[blue], discard_pile: %i[soy red wax chili], run_outs: 1)
+
+      expect(deck.summary).to eq(draw: 1, discard: 4, discard_top: %i[red wax chili], run_outs: 1)
+    end
+  end
+
   describe '#discard' do
     it 'adds cards to the discard pile' do
       deck = described_class.new(draw_pile: [])

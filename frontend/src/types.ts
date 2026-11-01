@@ -28,11 +28,14 @@ export interface PlayerState {
   pending: BeanKey[]
 }
 
+// discard_top is missing from tables logged before the discard pile was shown face up.
+export interface DeckSummary { draw: number; discard: number; discard_top?: BeanKey[]; run_outs: number }
+
 // What everyone can see at one moment; every log event carries one.
 export interface TableSnapshot {
   phase: Phase
   active_index: number
-  deck: { draw: number; discard: number; run_outs: number }
+  deck: DeckSummary
   face_up: BeanKey[]
   players: { hand_size: number; coins: number; fields: FieldState[]; pending: BeanKey[] }[]
 }
@@ -63,7 +66,7 @@ export interface GameState {
   hand_plants: number
   over: boolean
   winners: number[]
-  deck: { draw: number; discard: number; run_outs: number }
+  deck: DeckSummary
   face_up: BeanKey[]
   players: PlayerState[]
   offer: Offer | null

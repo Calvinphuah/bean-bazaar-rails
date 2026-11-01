@@ -3,6 +3,8 @@ module BeanBazaar
   # shuffled back in; the third time it runs dry the game is over.
   class Deck
     MAX_RUN_OUTS = 3
+    # The discard pile is face up; this many of its top cards are shown.
+    SHOWN_DISCARDS = 3
 
     attr_reader :draw_pile, :discard_pile, :run_outs
 
@@ -27,6 +29,11 @@ module BeanBazaar
 
     def to_h
       { draw_pile: draw_pile, discard_pile: discard_pile, run_outs: run_outs }
+    end
+
+    # What everyone can see: pile sizes and the top of the face-up discard pile.
+    def summary
+      { draw: draw_pile.size, discard: discard_pile.size, discard_top: discard_pile.last(SHOWN_DISCARDS), run_outs: run_outs }
     end
 
     # Returns up to `count` cards; fewer once the deck is exhausted.

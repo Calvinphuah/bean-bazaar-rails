@@ -52,23 +52,46 @@ const step = computed(() => Math.min(MAX_STEP, (MAX_FAN_WIDTH - CARD_WIDTH) / Ma
 const tilt = computed(() => Math.min(3, 30 / Math.max(props.hand.length, 1)))
 
 // Spread the cards in a gentle arc, like a hand held at a card table.
-function fanStyle(position: number): Record<string, string> {
-  const middle = (props.hand.length - 1) / 2
-  const offset = position - middle
+// The tilt sits on an inner layer, because the slide animation that runs when the
+// order flips wipes any transform on the slot itself.
+function slotStyle(position: number): Record<string, string> {
   return {
-    transform: `rotate(${offset * tilt.value}deg) translateY(${Math.abs(offset) * tilt.value}px)`,
     marginRight: position === props.hand.length - 1 ? "0" : `${step.value - CARD_WIDTH}px`,
     zIndex: String(position + 1),
   }
 }
 
-// The browser photographs the card for the drag ghost right after this handler,
-// so drop the glowing border for that one frame and put it back straight after.
+function tiltStyle(position: number): Record<string, string> {
+  const offset = position - (props.hand.length - 1) / 2
+  return { transform: `rotate(${offset * tilt.value}deg) translateY(${Math.abs(offset) * tilt.value}px)` }
+}
+
+// The hand card under the pointer, shown big with its coin row in the corner.
+const pointedAt = ref<number | null>(null)
+const pointedBean = computed(() => {
+  const bean = pointedAt.value === null ? undefined : props.hand[pointedAt.value]
+  return bean ? props.beanTypes[bean] : undefined
+})
+const pointedCopies = computed(() => props.hand.filter((bean) => bean === pointedBean.value?.key).length)
+
+// The front card is being dragged, so its "Plant next" tag and glow step aside.
+const dragging = ref(false)
+
+// Some browsers photograph everything on screen over the card for the drag ghost,
+// tag and glow included, so hand them a plain off-screen copy of the card instead.
 function onDragStart(event: DragEvent): void {
-  event.dataTransfer?.setData("text/plain", "front")
-  const card = event.currentTarget as HTMLElement
-  card.classList.add("lifting")
-  requestAnimationFrame(() => card.classList.remove("lifting"))
+  if (!event.dataTransfer) return
+  event.dataTransfer.setData("text/plain", "front")
+  const card = (event.currentTarget as HTMLElement).querySelector<HTMLElement>(".card")
+  if (card) {
+    const ghost = card.cloneNode(true) as HTMLElement
+    ghost.classList.remove("highlighted")
+    ghost.style.cssText = "position: fixed; top: -1000px; left: -1000px;"
+    document.body.append(ghost)
+    event.dataTransfer.setDragImage(ghost, event.offsetX, event.offsetY)
+    requestAnimationFrame(() => ghost.remove())
+  }
+  dragging.value = true
 }
 </script>
 
@@ -94,42 +117,63 @@ function onDragStart(event: DragEvent): void {
           <div
             v-if="beanTypes[bean]"
             class="slot"
-            :class="{ front: index === 0 }"
-            :style="fanStyle(position)"
+            :class="{ front: index === 0, dragging: index === 0 && dragging }"
+            :style="slotStyle(position)"
+            @mouseenter="pointedAt = index"
+            @mouseleave="pointedAt = null"
           >
-            <span
-              v-if="index === 0"
-              class="next"
-            >Plant next</span>
-            <button
-              v-if="pickable"
-              class="card-button"
-              :aria-pressed="picked.includes(index)"
-              :aria-label="`Offer your ${beanTypes[bean]!.name} bean`"
-              @click="emit('pick', index)"
-            >
-              <BeanCard
-                :bean="beanTypes[bean]!"
-                size="large"
-                :selected="picked.includes(index)"
-              />
-            </button>
             <div
-              v-else
-              :draggable="index === 0 && canPlantFront"
-              :class="{ grabbable: index === 0 && canPlantFront }"
-              @dragstart="onDragStart"
+              class="tilt"
+              :style="tiltStyle(position)"
             >
-              <BeanCard
-                :bean="beanTypes[bean]!"
-                size="large"
-                :highlighted="index === 0 && canPlantFront"
-              />
+              <span
+                v-if="index === 0"
+                class="next"
+              >Plant next</span>
+              <button
+                v-if="pickable"
+                class="card-button"
+                :aria-pressed="picked.includes(index)"
+                :aria-label="`Offer your ${beanTypes[bean]!.name} bean`"
+                @click="emit('pick', index)"
+              >
+                <BeanCard
+                  :bean="beanTypes[bean]!"
+                  size="large"
+                  :selected="picked.includes(index)"
+                />
+              </button>
+              <div
+                v-else
+                :draggable="index === 0 && canPlantFront"
+                :class="{ grabbable: index === 0 && canPlantFront }"
+                @dragstart="onDragStart"
+                @dragend="dragging = false"
+              >
+                <BeanCard
+                  :bean="beanTypes[bean]!"
+                  size="large"
+                  :highlighted="index === 0 && canPlantFront && !dragging"
+                />
+              </div>
             </div>
           </div>
         </template>
       </TransitionGroup>
     </div>
+    <Transition name="peek">
+      <div
+        v-if="pointedBean && !dragging"
+        class="preview"
+        aria-hidden="true"
+      >
+        <BeanCard
+          :bean="pointedBean"
+          size="full"
+        />
+        <p>{{ pointedCopies }} in your hand</p>
+      </div>
+    </Transition>
     <span
       v-if="!hand.length"
       class="empty"
@@ -142,8 +186,9 @@ function onDragStart(event: DragEvent): void {
 .hand { position: relative; display: flex; justify-content: center; align-items: flex-end; padding: 22px 20px 0; margin-bottom: -58px; min-height: 150px; }
 .fan { position: relative; display: flex; align-items: flex-end; }
 .swap { position: absolute; right: calc(100% + 18px); bottom: 74px; z-index: 60; white-space: nowrap; }
-.slot { position: relative; transform-origin: 50% 130%; transition: transform .18s ease, margin .2s ease; }
-.slot:hover { transform: translateY(-46px) !important; z-index: 50 !important; }
+.slot { position: relative; transition: transform .18s ease, margin .2s ease; }
+.slot:hover { transform: translateY(-46px); z-index: 50 !important; }
+.tilt { position: relative; transform-origin: 50% 130%; transition: transform .2s ease; }
 .next {
   position: absolute;
   top: -14px;
@@ -161,6 +206,21 @@ function onDragStart(event: DragEvent): void {
 }
 .grabbable { cursor: grab; }
 .grabbable:active { cursor: grabbing; }
-.lifting :deep(.card) { box-shadow: none; transition: none; }
+.preview {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 70;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.preview p { margin: 0; color: var(--ink); padding: 2px 10px; border-radius: 999px; background: var(--panel); border: 2px solid var(--ink); font-size: 12px; font-weight: 800; }
+.peek-enter-active, .peek-leave-active { transition: opacity .15s ease, transform .15s ease; }
+.peek-enter-from, .peek-leave-to { opacity: 0; transform: translateY(12px); }
+/* The card left behind fades while its copy is carried to a field. */
+.slot.dragging { opacity: .45; }
+.slot.dragging .next { visibility: hidden; }
 .empty { font-size: 13px; color: #fff6dc; padding-bottom: 80px; }
 </style>

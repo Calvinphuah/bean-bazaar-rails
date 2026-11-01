@@ -7,8 +7,6 @@ import type { BeanType, TableSnapshot } from "../types"
 // One edge line per this many cards, so a full deck looks thick and a low one thin.
 const CARDS_PER_EDGE = 12
 const MAX_EDGES = 7
-// Tossed cards under the top of the discard pile, each at its own angle.
-const DISCARD_TILTS = [-9, 6, -3]
 
 const props = defineProps<{
   table: TableSnapshot
@@ -21,7 +19,19 @@ const props = defineProps<{
 const emit = defineEmits<{ pick: [index: number] }>()
 
 const deckEdges = computed(() => Math.min(MAX_EDGES, Math.ceil(props.table.deck.draw / CARDS_PER_EDGE)))
-const discardTilts = computed(() => DISCARD_TILTS.slice(0, Math.min(props.table.deck.discard, DISCARD_TILTS.length)))
+// Each discard keeps its own scruffy angle and nudge, worked out from its place in
+// the pile, so a card doesn't jump around when more land on top.
+const discards = computed(() => {
+  const top = props.table.deck.discard_top ?? []
+  const firstPlace = props.table.deck.discard - top.length
+  return top.map((bean, index) => {
+    const place = firstPlace + index
+    const angle = ((place * 37) % 29) - 14
+    const nudgeX = ((place * 53) % 15) - 7
+    const nudgeY = ((place * 29) % 11) - 5
+    return { bean, place, style: { transform: `translate(${nudgeX}px, ${nudgeY}px) rotate(${angle}deg)` } }
+  })
+})
 
 // Card edges peeking out under the top card, like the side of a real deck.
 const deckStyle = computed(() => {
@@ -41,12 +51,12 @@ const deckStyle = computed(() => {
         data-tour="deck"
       >
         <div
-          class="stack"
+          class="pile-cards"
           :class="{ empty: !table.deck.draw }"
         >
           <img
             v-if="table.deck.draw"
-            class="card deck-top"
+            class="back"
             :style="deckStyle"
             src="/cards/coin_back.webp"
             alt=""
@@ -57,17 +67,24 @@ const deckStyle = computed(() => {
       </div>
       <div class="pile">
         <div
-          class="stack"
+          class="pile-cards"
           :class="{ empty: !table.deck.discard }"
         >
-          <img
-            v-for="(tilt, index) in discardTilts"
-            :key="index"
-            class="card tossed"
-            :style="{ transform: `rotate(${tilt}deg)` }"
-            src="/cards/coin_back.webp"
-            alt=""
+          <template
+            v-for="card in discards"
+            :key="card.place"
           >
+            <div
+              v-if="beanTypes[card.bean]"
+              class="tossed"
+              :style="card.style"
+            >
+              <BeanCard
+                :bean="beanTypes[card.bean]!"
+                size="small"
+              />
+            </div>
+          </template>
           <span class="count">{{ table.deck.discard }}</span>
         </div>
         <span class="label">Discard</span>
@@ -124,11 +141,11 @@ const deckStyle = computed(() => {
 .piles { display: grid; grid-template-columns: auto auto; gap: 12px 22px; align-items: end; justify-items: center; }
 .pile { display: grid; justify-items: center; gap: 22px; }
 .label { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
-.stack { position: relative; width: 86px; aspect-ratio: 63 / 88; }
+.pile-cards { position: relative; width: 92px; aspect-ratio: 63 / 88; }
 /* An empty pile leaves a faint outline where the cards were. */
-.stack.empty { border-radius: 9px; border: 2px dashed rgba(255, 246, 220, .35); }
-.card { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; border: 2px solid #fff; }
-.tossed { box-shadow: 0 6px 12px rgba(0, 0, 0, .3); }
+.pile-cards.empty { border-radius: 9px; border: 2px dashed rgba(255, 246, 220, .35); }
+.back { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; border: 2px solid #fff; }
+.tossed { position: absolute; inset: 0; }
 .count {
   position: absolute;
   top: -9px;

@@ -76,7 +76,7 @@ module BeanBazaar
       {
         phase: phase,
         active_index: active_index,
-        deck: { draw: deck.draw_pile.size, discard: deck.discard_pile.size, run_outs: deck.run_outs },
+        deck: deck.summary,
         face_up: face_up.cards.dup,
         players: players.map do |player|
           { hand_size: player.hand.size, coins: player.coins, fields: player.fields.map(&:to_h), pending: player.pending.dup }

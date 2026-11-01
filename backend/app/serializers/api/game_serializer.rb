@@ -15,7 +15,7 @@ class Api::GameSerializer
       hand_plants: @engine.hand_plants,
       over: @engine.over?,
       winners: winner_indexes,
-      deck: { draw: @engine.deck.draw_pile.size, discard: @engine.deck.discard_pile.size, run_outs: @engine.deck.run_outs },
+      deck: @engine.deck.summary,
       face_up: @engine.face_up.cards,
       players: @engine.players.each_with_index.map { |player, index| player_json(player, index) },
       offer: offer_json,

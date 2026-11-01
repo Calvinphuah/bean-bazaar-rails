@@ -254,7 +254,7 @@ RSpec.describe BeanBazaar::Game do
 
       expect(table[:players].first).to eq(hand_size: 2, coins: 0, fields: [{ bean: :blue, count: 1 }, { bean: nil, count: 0 }], pending: [])
       expect(table).to include(phase: :plant, active_index: 0, face_up: [])
-      expect(table[:deck]).to eq(draw: 6, discard: 0, run_outs: 0)
+      expect(table[:deck]).to eq(draw: 6, discard: 0, discard_top: [], run_outs: 0)
     end
 
     it 'notes the end of the game, even when the flip finds no cards' do
