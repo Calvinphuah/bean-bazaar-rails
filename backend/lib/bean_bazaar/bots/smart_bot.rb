@@ -23,6 +23,8 @@ module BeanBazaar
       MAX_OFFERS_TO_HUMAN = 3
       # A swap lists up to this many beans it would take, so the human can pick one they hold.
       MAX_CHOICES = 3
+      # What a hoarding bot thinks its favourite bean is worth keeping.
+      HOARD_VALUE = 8
 
       def play_plant_phase
         buy_field_if_rich
@@ -59,7 +61,7 @@ module BeanBazaar
       # the asker gains. Junk gifts and one-sided swaps get turned down.
       def accepts?(offered:, requested:)
         value = deal_value(offered, requested)
-        requested.empty? ? value >= min_gift_value : value.positive?
+        requested.empty? ? value >= min_gift_value : value >= personality.deal_margin
       end
 
       # A smaller deal it would take instead: it drops whichever card helps it most,
@@ -169,14 +171,18 @@ module BeanBazaar
         incoming_value(offered) - requested.sum { |card| keeping_value(card) } - (requested.size * help_cost)
       end
 
+      def personality
+        Personality.for(player.name)
+      end
+
       def min_gift_value
-        MIN_GIFT_VALUE
+        MIN_GIFT_VALUE - personality.gift_kindness
       end
 
       # Helping a leader costs more.
       def help_cost
         lead = @game.players[asker_index].coins - player.coins
-        HELP_COST + lead.clamp(0, MAX_LEAD_COST)
+        HELP_COST + (lead.clamp(0, MAX_LEAD_COST) * personality.lead_wariness).round
       end
 
       # The active player asks, unless this bot is active and someone is bidding to it.
@@ -241,7 +247,7 @@ module BeanBazaar
 
       # Digging up a field throws away the beans that haven't reached a coin yet.
       def uprooting_cost(field)
-        COIN_VALUE + [field.count - (field.coins * COIN_VALUE), 0].max
+        (COIN_VALUE + [field.count - (field.coins * COIN_VALUE), 0].max) * personality.uproot_scale
       end
 
       # An empty field stays free for the front card, which must be planted next turn.
@@ -254,10 +260,15 @@ module BeanBazaar
       # What a hand card is worth keeping: a bean it grows is valuable, a card with
       # nowhere to go is a relief to hand over.
       def keeping_value(card)
+        return HOARD_VALUE if personality.hoards && card == biggest_bean
         return GROWING_BEAN_VALUE + 1 if grows?(card)
         return 0 if player.fields.any?(&:empty?)
 
         -1
+      end
+
+      def biggest_bean
+        player.fields.max_by(&:count).bean
       end
 
       # Gives the human a card it can't use for any one of the beans it grows, or,

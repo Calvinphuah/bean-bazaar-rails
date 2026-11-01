@@ -12,7 +12,7 @@ RSpec.describe Games::QuoteTrade do
   # Pinto grows red and holds a spare green; Lima grows wax and soy and holds two wax.
   let(:you) { player('You', %i[blue soy]) }
   let(:pinto) { player('Pinto', %i[green stink], fields: [field(:red, 2), field]) }
-  let(:lima) { player('Lima', %i[wax wax], fields: [field(:wax, 2), field(:soy, 2)]) }
+  let(:lima) { player('Lima', %i[wax wax], fields: [field(:wax, 2), field(:soy, 3)]) }
   let(:engine) do
     BeanBazaar::Game.new(
       players: [you, pinto, lima],
@@ -39,7 +39,8 @@ RSpec.describe Games::QuoteTrade do
   end
 
   it 'quotes a gift to every bot, each judging it for itself' do
-    # Lima grows soy; Pinto keeps its one empty field for the green it plants next.
+    # Shrewd Lima takes the soy that reaches its next coin; Pinto keeps its one empty
+    # field for the green it plants next.
     expect(answers(face_up_indexes: [1])).to eq(1 => 'decline', 2 => 'accept')
   end
 

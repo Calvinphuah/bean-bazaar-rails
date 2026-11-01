@@ -47,6 +47,14 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   decline: "No thanks",
   missing: "Don't have it",
 }
+// Each bot answers in its own voice, matching how it trades.
+const VOICES: Record<string, Partial<Record<QuoteAnswer, string>>> = {
+  Pinto: { decline: "Sorry, friend", missing: "None, sorry!" },
+  Lima: { decline: "Do better", missing: "Not here" },
+  Fava: { decline: "Mine, all mine", missing: "Not in my pile" },
+  Mung: { decline: "Not worth the risk", missing: "Out of luck" },
+}
+const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer] ?? ANSWER_LABELS[answer]
 </script>
 
 <template>
@@ -179,7 +187,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
           Take deal
         </button>
       </div>
-      <span v-else>{{ ANSWER_LABELS[answer] }}</span>
+      <span v-else>{{ answerLabel(answer) }}</span>
     </div>
   </div>
 </template>

@@ -33,7 +33,7 @@ module BeanBazaar
       end
 
       def min_gift_value
-        KIND_GIFT_VALUE
+        KIND_GIFT_VALUE - personality.gift_kindness
       end
 
       def help_cost
