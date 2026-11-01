@@ -23,12 +23,11 @@ const props = defineProps<{
   busy: boolean
   replaying: LogEvent | null
   showTutorial: boolean
-  musicOn: boolean
   soundOn: boolean
   move: (next: Move) => Promise<boolean>
 }>()
 
-const emit = defineEmits<{ leave: []; skip: []; tutorialDone: []; tutorial: []; toggleMusic: []; toggleSound: [] }>()
+const emit = defineEmits<{ leave: []; skip: []; tutorialDone: []; tutorial: []; toggleSound: [] }>()
 
 // Seat spots around the table, clockwise from your left, by number of bots.
 const SEAT_SPOTS: Record<number, string[]> = {
@@ -240,14 +239,6 @@ function ordinal(place: number): string {
         :turn-label="turnLabel"
       />
       <div class="tools">
-        <button
-          class="tool"
-          :aria-pressed="musicOn"
-          :title="musicOn ? 'Turn the music off' : 'Turn the music on'"
-          @click="emit('toggleMusic')"
-        >
-          {{ musicOn ? "♪ Music" : "♪ Off" }}
-        </button>
         <button
           class="tool"
           :aria-pressed="soundOn"

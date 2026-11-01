@@ -2,13 +2,10 @@ import { ref, watch } from "vue"
 import type { GameState, LogEvent } from "./types"
 
 const SETTINGS_KEY = "bean-bazaar-sound"
-// Quiet by design: sounds mark moments, music sits under the table.
+// Quiet by design: sounds mark moments, with no music underneath.
 const SOUND_VOLUME = 0.45
 // Bots' moves are heard, but softer than your own.
 const BOT_VOLUME_SCALE = 0.5
-// Background only: you should notice it when it stops, not while it plays.
-const MUSIC_VOLUME = 0.06
-const MUSIC_FADE_MS = 2500
 // A fast replay can fire the same sound in a burst; one per gap is enough.
 const MIN_GAP_MS = 140
 // A harvest this big gets the fuller chip sound.
@@ -18,41 +15,29 @@ export type SoundName =
   | "plant-1" | "plant-2" | "flip" | "trade" | "harvest-small" | "harvest-big"
   | "offer" | "your-turn" | "buy-field" | "deal"
 
-interface Settings {
-  music: boolean
-  sound: boolean
-}
-
-// localStorage can throw in private windows; sound settings are only a convenience.
-function loadSettings(): Settings {
+// localStorage can throw in private windows; the setting is only a convenience.
+function loadSoundOn(): boolean {
   try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<Settings>
-    // Music starts off, so it never surprises anyone; the header button turns it on.
-    return { music: saved.music ?? false, sound: saved.sound ?? true }
+    return (JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as { sound?: boolean }).sound ?? true
   } catch {
-    return { music: false, sound: true }
+    return true
   }
 }
 
-function saveSettings(settings: Settings): void {
+function saveSoundOn(sound: boolean): void {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ sound }))
   } catch {
-    // Nothing to do: the settings just won't be remembered.
+    // Nothing to do: the setting just won't be remembered.
   }
 }
 
-// Sound effects for table moments and a soft music loop, both switchable.
-// Browsers block audio until the first click or key press, so music waits for it.
+// Sound effects for table moments, like the deal and the start of your turn.
+// There is no background music, so the table stays calm.
 export function useSound() {
-  const settings = loadSettings()
-  const musicOn = ref(settings.music)
-  const soundOn = ref(settings.sound)
+  const soundOn = ref(loadSoundOn())
   const lastPlayed = new Map<SoundName, number>()
   let plantTurn = 0
-  let music: HTMLAudioElement | null = null
-  let fadeTimer: ReturnType<typeof setInterval> | null = null
-  let unlocked = false
 
   function play(name: SoundName, quiet = false): void {
     if (!soundOn.value) return
@@ -104,58 +89,12 @@ export function useSound() {
     return Number(/for (\d+) coin/.exec(event.text)?.[1] ?? 0)
   }
 
-  function startMusic(): void {
-    if (!musicOn.value || !unlocked) return
-    if (!music) {
-      music = new Audio()
-      music.src = music.canPlayType('audio/webm; codecs="opus"') ? "/sounds/music.webm" : "/sounds/music.mp3"
-      music.loop = true
-    }
-    music.volume = 0
-    music.play().catch(() => {})
-    fadeTo(MUSIC_VOLUME)
-  }
-
-  function stopMusic(): void {
-    if (music) fadeTo(0, () => music?.pause())
-  }
-
-  function fadeTo(target: number, done?: () => void): void {
-    if (fadeTimer) clearInterval(fadeTimer)
-    const steps = 25
-    const step = (target - (music?.volume ?? 0)) / steps
-    let left = steps
-    fadeTimer = setInterval(() => {
-      if (!music) return
-      left -= 1
-      music.volume = left <= 0 ? target : Math.min(1, Math.max(0, music.volume + step))
-      if (left <= 0 && fadeTimer) {
-        clearInterval(fadeTimer)
-        fadeTimer = null
-        done?.()
-      }
-    }, MUSIC_FADE_MS / steps)
-  }
-
-  function unlock(): void {
-    unlocked = true
-    startMusic()
-  }
-  window.addEventListener("pointerdown", unlock, { once: true })
-  window.addEventListener("keydown", unlock, { once: true })
-
-  watch([musicOn, soundOn], ([musicNow, soundNow]) => {
-    saveSettings({ music: musicNow, sound: soundNow })
-    if (musicNow) startMusic()
-    else stopMusic()
-  })
+  watch(soundOn, saveSoundOn)
 
   return {
-    musicOn,
     soundOn,
     play,
     cue,
-    toggleMusic: () => { musicOn.value = !musicOn.value },
     toggleSound: () => { soundOn.value = !soundOn.value },
   }
 }

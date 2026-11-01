@@ -76,14 +76,12 @@ onMounted(resume)
     :busy="busy"
     :replaying="replaying"
     :show-tutorial="showTutorial"
-    :music-on="sound.musicOn.value"
     :sound-on="sound.soundOn.value"
     :move="move"
     @leave="leave"
     @skip="skipReplay"
     @tutorial="showTutorial = true"
     @tutorial-done="closeTutorial"
-    @toggle-music="sound.toggleMusic"
     @toggle-sound="sound.toggleSound"
   />
 
