@@ -41,6 +41,17 @@ module BeanBazaar
       raise IllegalMove, "There is no card at position #{missing}" if missing
     end
 
+    # Positions of the asked-for beans, each card used once; nil if one is missing.
+    # Lets a player ask for bean types without seeing another player's hand.
+    def indexes_of(beans)
+      beans.each_with_object([]) do |bean, indexes|
+        index = cards.each_index.find { |candidate| cards[candidate] == bean.to_sym && !indexes.include?(candidate) }
+        return nil if index.nil?
+
+        indexes << index
+      end
+    end
+
     # Removes the cards at `indexes` and returns them in row order.
     def take_at(indexes)
       check!(indexes)

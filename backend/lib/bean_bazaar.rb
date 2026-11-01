@@ -9,6 +9,7 @@ require_relative 'bean_bazaar/player'
 require_relative 'bean_bazaar/trade'
 require_relative 'bean_bazaar/game'
 require_relative 'bean_bazaar/bots/simple_bot'
+require_relative 'bean_bazaar/bots/smart_bot'
 require_relative 'bean_bazaar/bot_runner'
 
 module BeanBazaar

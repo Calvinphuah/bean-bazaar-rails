@@ -2,7 +2,7 @@ module BeanBazaar
   module Bots
     # Plays by simple rules: plant where a card fits, keep beans that match its
     # fields, give away the rest, and harvest the best field when it needs room.
-    # Swap this class out for a smarter bot later; BotRunner only calls the
+    # This is the "easy" bot; SmartBot builds on it. BotRunner only calls the
     # public methods below.
     class SimpleBot
       def initialize(game, player_index)
@@ -18,7 +18,8 @@ module BeanBazaar
       end
 
       # Offers face-up cards it can't use to other bots, then ends trading.
-      def play_trade_phase(partner_indexes:)
+      # The easy bot never makes offers to the human.
+      def play_trade_phase(partner_indexes:, human_index: nil) # rubocop:disable Lint/UnusedMethodArgument
         offer_unwanted_cards(partner_indexes)
         @game.end_trading
       end
@@ -96,7 +97,7 @@ module BeanBazaar
         card = @game.face_up.cards[face_up_index]
 
         partner_indexes.each do |partner_index|
-          partner = SimpleBot.new(@game, partner_index)
+          partner = self.class.new(@game, partner_index)
           wanted_index = @game.players[partner_index].hand.cards.index { |hand_card| grows?(hand_card) }
           requested = wanted_index.nil? ? [] : [@game.players[partner_index].hand.cards[wanted_index]]
           next if !partner.accepts?(offered: [card], requested: requested)

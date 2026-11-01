@@ -54,6 +54,31 @@ RSpec.describe BeanBazaar::BotRunner do
     expect(game.players.drop(1).map(&:pending)).to all(be_empty)
   end
 
+  it "pauses while a smart bot's offer waits for the human" do
+    bot = BeanBazaar::Player.new(
+      name: 'Bot',
+      fields: [BeanBazaar::Field.new(bean: :soy, count: 2), BeanBazaar::Field.new(bean: :blue, count: 2)],
+    )
+    human = BeanBazaar::Player.new(name: 'You', hand: BeanBazaar::Hand.new(%i[soy]))
+    # Full fields of other beans, so this bot turns the red bean down and it goes to the human.
+    other = BeanBazaar::Player.new(
+      name: 'Other',
+      fields: [BeanBazaar::Field.new(bean: :wax, count: 2), BeanBazaar::Field.new(bean: :green, count: 2)],
+    )
+    deck = BeanBazaar::Deck.new(draw_pile: Array.new(30, :chili))
+    game = BeanBazaar::Game.new(players: [bot, human, other], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]))
+    described_class.new(game, human_index: 1, bot_class: BeanBazaar::Bots::SmartBot).run
+
+    expect(game.offer).to include('partner_index' => 1)
+    expect(game.phase).to eq(:trade)
+
+    game.decline_offer
+    described_class.new(game, human_index: 1, bot_class: BeanBazaar::Bots::SmartBot).run
+
+    expect(game.offer).to be_nil
+    expect(game.active_index).to eq(1)
+  end
+
   it 'raises if the bots stop making progress' do
     stuck_bot = Class.new do
       def initialize(*)

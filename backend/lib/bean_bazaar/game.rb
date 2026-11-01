@@ -11,9 +11,9 @@ module BeanBazaar
     MAX_HAND_PLANTS = 2
     FLIP_COUNT = 2
     DRAW_COUNT = 3
-    LOG_SIZE = 40
+    LOG_SIZE = 60
 
-    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log
+    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn
 
     def self.start(names:, random: Random.new)
       raise ArgumentError, "Bean Bazaar needs #{PLAYER_COUNTS} players" if !PLAYER_COUNTS.cover?(names.size)
@@ -32,11 +32,17 @@ module BeanBazaar
         active_index: hash['active_index'],
         face_up: Hand.from_h(hash['face_up']),
         hand_plants: hash['hand_plants'],
-        log: hash.fetch('log', [])
+        log: hash.fetch('log', []),
+        event_seq: hash.fetch('event_seq', 0),
+        offer: hash['offer'],
+        offers_this_turn: hash.fetch('offers_this_turn', 0),
       )
     end
 
-    def initialize(players:, deck:, phase: :plant, active_index: 0, face_up: Hand.new, hand_plants: 0, log: [])
+    def initialize(
+      players:, deck:, phase: :plant, active_index: 0, face_up: Hand.new, hand_plants: 0,
+      log: [], event_seq: 0, offer: nil, offers_this_turn: 0
+    )
       @players = players
       @deck = deck
       @phase = phase
@@ -44,6 +50,9 @@ module BeanBazaar
       @face_up = face_up
       @hand_plants = hand_plants
       @log = log
+      @event_seq = event_seq
+      @offer = offer
+      @offers_this_turn = offers_this_turn
     end
 
     def to_h
@@ -55,6 +64,23 @@ module BeanBazaar
         face_up: face_up.to_h,
         hand_plants: hand_plants,
         log: log,
+        event_seq: @event_seq,
+        offer: offer,
+        offers_this_turn: offers_this_turn,
+      }
+    end
+
+    # What everyone at the table can see; hands are counts only. Each log entry keeps
+    # one, so a client can replay the bots' moves step by step.
+    def public_table
+      {
+        phase: phase,
+        active_index: active_index,
+        deck: { draw: deck.draw_pile.size, discard: deck.discard_pile.size, run_outs: deck.run_outs },
+        face_up: face_up.cards.dup,
+        players: players.map do |player|
+          { hand_size: player.hand.size, coins: player.coins, fields: player.fields.map(&:to_h), pending: player.pending.dup }
+        end,
       }
     end
 
@@ -82,7 +108,7 @@ module BeanBazaar
       active_player.plant(card, field_index)
       active_player.hand.take_front
       @hand_plants += 1
-      note("#{active_player.name} planted #{bean_names([card])}")
+      note(:plant, active_index, "#{active_player.name} planted #{bean_names([card])}")
     end
 
     def flip_cards
@@ -91,32 +117,63 @@ module BeanBazaar
 
       @face_up = Hand.new(deck.draw(FLIP_COUNT))
       @phase = :trade
-      note("#{active_player.name} flipped #{bean_names(face_up.cards)}") if !face_up.empty?
+      note(:flip, active_index, "#{active_player.name} flipped #{bean_names(face_up.cards)}") if !face_up.empty?
       finish if deck.exhausted?
     end
 
     def trade(partner_index:, face_up_indexes: [], hand_indexes: [], partner_hand_indexes: [])
       require_phase(:trade)
+      require_no_offer
 
+      execute_trade(player_at(partner_index), face_up_indexes, hand_indexes, partner_hand_indexes)
+    end
+
+    # The active player asks another player for bean types, since hands are hidden.
+    # The offer waits until that player accepts or declines it.
+    def propose(partner_index:, face_up_indexes: [], hand_indexes: [], partner_beans: [])
+      require_phase(:trade)
+      require_no_offer
       partner = player_at(partner_index)
-      offered, requested = Trade.new(
-        active: active_player,
-        partner: partner,
-        face_up: face_up,
-        face_up_indexes: face_up_indexes,
-        hand_indexes: hand_indexes,
-        partner_hand_indexes: partner_hand_indexes
-      ).execute
-      note(trade_message(partner, offered, requested))
+      raise IllegalMove, "You can't trade with yourself" if partner.equal?(active_player)
+      raise IllegalMove, 'An offer needs at least one card' if [face_up_indexes, hand_indexes, partner_beans].all?(&:empty?)
+
+      face_up.check!(face_up_indexes)
+      active_player.hand.check!(hand_indexes)
+      @offer = {
+        'partner_index' => partner_index,
+        'face_up_indexes' => face_up_indexes,
+        'hand_indexes' => hand_indexes,
+        'partner_beans' => partner_beans.map(&:to_s),
+      }
+      @offers_this_turn += 1
+      note(:offer, active_index, offer_message(partner))
+    end
+
+    def accept_offer
+      waiting = require_offer
+      partner = player_at(waiting['partner_index'])
+      partner_hand_indexes = partner.hand.indexes_of(waiting['partner_beans'])
+      raise IllegalMove, "#{partner.name} has no #{bean_names(waiting['partner_beans'])} to give" if partner_hand_indexes.nil?
+
+      @offer = nil
+      execute_trade(partner, waiting['face_up_indexes'], waiting['hand_indexes'], partner_hand_indexes)
+    end
+
+    def decline_offer
+      waiting = require_offer
+      partner = player_at(waiting['partner_index'])
+      @offer = nil
+      note(:decline, waiting['partner_index'], "#{partner.name} turned down #{active_player.name}'s offer")
     end
 
     # Face-up cards nobody traded for stay with the active player.
     def end_trading
       require_phase(:trade)
+      require_no_offer
 
       kept = face_up.take_all
       active_player.receive(kept)
-      note("#{active_player.name} kept #{bean_names(kept)}") if kept.any?
+      note(:keep, active_index, "#{active_player.name} kept #{bean_names(kept)}") if kept.any?
       @phase = :plant_pending
       finish_turn if nothing_pending?
     end
@@ -124,7 +181,10 @@ module BeanBazaar
     def plant_pending(player_index:, pending_index:, field_index:)
       require_phase(:plant_pending)
 
-      player_at(player_index).plant_pending(pending_index, field_index)
+      player = player_at(player_index)
+      card = player.pending[pending_index]
+      player.plant_pending(pending_index, field_index)
+      note(:plant, player_index, "#{player.name} planted #{bean_names([card])}")
       finish_turn if nothing_pending?
     end
 
@@ -138,7 +198,7 @@ module BeanBazaar
       count = field&.count
       deck.discard(player.harvest(field_index))
       earned = player.coins - coins_before
-      note("#{player.name} harvested #{count} #{BeanType.find(bean).name} for #{earned} #{earned == 1 ? 'coin' : 'coins'}")
+      note(:harvest, player_index, "#{player.name} harvested #{count} #{BeanType.find(bean).name} for #{coin_text(earned)}")
     end
 
     def buy_third_field(player_index:)
@@ -146,13 +206,21 @@ module BeanBazaar
 
       player = player_at(player_index)
       deck.discard(player.buy_third_field)
-      note("#{player.name} bought a third field")
+      note(:buy_field, player_index, "#{player.name} bought a third field")
     end
 
     private
 
     def require_phase(expected)
       raise IllegalMove, "You can't do that during the #{phase} phase" if phase != expected
+    end
+
+    def require_no_offer
+      raise IllegalMove, 'Answer the waiting offer first' if offer
+    end
+
+    def require_offer
+      offer || raise(IllegalMove, 'There is no offer to answer')
     end
 
     def player_at(index)
@@ -163,33 +231,55 @@ module BeanBazaar
       players.all? { |player| player.pending.empty? }
     end
 
+    def execute_trade(partner, face_up_indexes, hand_indexes, partner_hand_indexes)
+      offered, requested = Trade.new(
+        active: active_player,
+        partner: partner,
+        face_up: face_up,
+        face_up_indexes: face_up_indexes,
+        hand_indexes: hand_indexes,
+        partner_hand_indexes: partner_hand_indexes,
+      ).execute
+      note(:trade, active_index, trade_message(partner, offered, requested))
+    end
+
     def finish_turn
       active_player.hand.add(deck.draw(DRAW_COUNT))
       return finish if deck.exhausted?
 
       @active_index = (active_index + 1) % players.size
       @hand_plants = 0
+      @offers_this_turn = 0
       @phase = :plant
-      note("#{active_player.name}'s turn")
+      note(:turn, active_index, "#{active_player.name}'s turn")
     end
 
     # The deck ran out for the last time: clear the table and harvest everything.
     def finish
+      @offer = nil
       deck.discard(face_up.take_all)
       players.each do |player|
         deck.discard(player.pending.slice!(0..))
         deck.discard(player.harvest_all)
       end
       @phase = :over
-      note('The deck ran out for the third time. Game over!')
+      note(:game_over, nil, 'The deck ran out for the third time. Game over!')
     end
 
-    def note(message)
-      @log = (log + [message]).last(LOG_SIZE)
+    # @param type [Symbol] what happened: plant, flip, trade, offer, harvest, turn...
+    # @param player_index [Integer, nil] who did it
+    def note(type, player_index, text)
+      @event_seq += 1
+      entry = { seq: @event_seq, type: type, player: player_index, text: text, table: public_table }
+      @log = (log + [entry]).last(LOG_SIZE)
     end
 
     def bean_names(cards)
-      cards.map { |card| BeanType.find(card).name }.join(' and ')
+      cards.map { |card| BeanType.find(card.to_sym).name }.join(' and ')
+    end
+
+    def coin_text(coins)
+      "#{coins} #{coins == 1 ? 'coin' : 'coins'}"
     end
 
     def trade_message(partner, offered, requested)
@@ -197,6 +287,16 @@ module BeanBazaar
       return "#{active_player.name} gave #{bean_names(offered)} to #{partner.name}" if requested.empty?
 
       "#{active_player.name} traded #{bean_names(offered)} to #{partner.name} for #{bean_names(requested)}"
+    end
+
+    def offer_message(partner)
+      gives = offer['face_up_indexes'].map { |index| face_up.cards[index] } +
+              offer['hand_indexes'].map { |index| active_player.hand.cards[index] }
+      asks = offer['partner_beans']
+      return "#{active_player.name} asks #{partner.name} for #{bean_names(asks)}" if gives.empty?
+      return "#{active_player.name} offers #{partner.name} #{bean_names(gives)} as a gift" if asks.empty?
+
+      "#{active_player.name} offers #{partner.name} #{bean_names(gives)} for #{bean_names(asks)}"
     end
   end
 end

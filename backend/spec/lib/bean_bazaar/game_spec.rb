@@ -5,6 +5,10 @@ RSpec.describe BeanBazaar::Game do
     BeanBazaar::Player.new(name: name, hand: BeanBazaar::Hand.new(hand))
   end
 
+  def texts(game)
+    game.log.map { |entry| entry[:text] }
+  end
+
   let(:calvin) { player('Calvin', %i[blue soy red]) }
   let(:bot) { player('Bot', %i[wax chili]) }
   let(:deck) { BeanBazaar::Deck.new(draw_pile: %i[green stink red red red black_eyed]) }
@@ -142,7 +146,7 @@ RSpec.describe BeanBazaar::Game do
 
       expect(calvin.coins).to eq(1)
       expect(deck.discard_pile).to eq(%i[blue blue blue])
-      expect(game.log.last).to eq('Calvin harvested 4 Blue for 1 coin')
+      expect(texts(game).last).to eq('Calvin harvested 4 Blue for 1 coin')
     end
 
     it 'discards the coins spent on a third field' do
@@ -204,7 +208,7 @@ RSpec.describe BeanBazaar::Game do
       game.trade(partner_index: 1, partner_hand_indexes: [0])
       game.end_trading
 
-      expect(game.log).to eq([
+      expect(texts(game)).to eq([
         'Calvin planted Blue',
         'Calvin flipped Green and Stink',
         'Calvin traded Green to Bot for Chili',
@@ -223,7 +227,7 @@ RSpec.describe BeanBazaar::Game do
       game.harvest(player_index: 0, field_index: 0)
       game.end_trading
 
-      expect(game.log.last(4)).to eq([
+      expect(texts(game).last(4)).to eq([
         'Calvin gave Green and Stink to Bot',
         'Calvin bought a third field',
         'Calvin harvested 1 Blue for 0 coins',
@@ -236,11 +240,21 @@ RSpec.describe BeanBazaar::Game do
     end
 
     it 'keeps only the latest entries' do
-      long_game = described_class.new(players: [calvin, bot], deck: deck, log: Array.new(40) { |index| "Entry #{index}" })
+      old_entries = Array.new(60) { |index| { seq: index, text: "Entry #{index}" } }
+      long_game = described_class.new(players: [calvin, bot], deck: deck, log: old_entries, event_seq: 60)
       long_game.plant_from_hand(0)
 
-      expect(long_game.log.size).to eq(40)
-      expect(long_game.log.last).to eq('Calvin planted Blue')
+      expect(long_game.log.size).to eq(60)
+      expect(long_game.log.last).to include(seq: 61, type: :plant, player: 0, text: 'Calvin planted Blue')
+    end
+
+    it 'snapshots the public table with every entry, hiding hands' do
+      game.plant_from_hand(0)
+      table = game.log.last[:table]
+
+      expect(table[:players].first).to eq(hand_size: 2, coins: 0, fields: [{ bean: :blue, count: 1 }, { bean: nil, count: 0 }], pending: [])
+      expect(table).to include(phase: :plant, active_index: 0, face_up: [])
+      expect(table[:deck]).to eq(draw: 6, discard: 0, run_outs: 0)
     end
 
     it 'notes the end of the game, even when the flip finds no cards' do
@@ -248,8 +262,80 @@ RSpec.describe BeanBazaar::Game do
       game.plant_from_hand(0)
       game.flip_cards
 
-      expect(game.log.last).to eq('The deck ran out for the third time. Game over!')
-      expect(game.log).not_to include(a_string_starting_with('Calvin flipped'))
+      expect(texts(game).last).to eq('The deck ran out for the third time. Game over!')
+      expect(texts(game)).not_to include(a_string_starting_with('Calvin flipped'))
+    end
+  end
+
+  describe 'offers' do
+    before do
+      game.plant_from_hand(0)
+      game.flip_cards
+    end
+
+    it 'waits for the partner to accept, then trades the asked-for beans' do
+      game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[chili])
+
+      expect(game.offer).to eq('partner_index' => 1, 'face_up_indexes' => [0], 'hand_indexes' => [], 'partner_beans' => %w[chili])
+      expect(texts(game).last).to eq('Calvin offers Bot Green for Chili')
+      expect { game.end_trading }.to raise_error(BeanBazaar::IllegalMove, 'Answer the waiting offer first')
+
+      game.accept_offer
+
+      expect(game.offer).to be_nil
+      expect(bot.pending).to eq(%i[green])
+      expect(calvin.pending).to eq(%i[chili])
+      expect(game.offers_this_turn).to eq(1)
+    end
+
+    it 'can be declined, leaving the cards where they were' do
+      game.propose(partner_index: 1, hand_indexes: [0])
+      game.decline_offer
+
+      expect(game.offer).to be_nil
+      expect(calvin.hand.cards).to eq(%i[soy red])
+      expect(texts(game).last).to eq("Bot turned down Calvin's offer")
+    end
+
+    it 'describes gifts and plain asks' do
+      game.propose(partner_index: 1, face_up_indexes: [1])
+      expect(texts(game).last).to eq('Calvin offers Bot Stink as a gift')
+      game.decline_offer
+
+      game.propose(partner_index: 1, partner_beans: %w[wax])
+      expect(texts(game).last).to eq('Calvin asks Bot for Wax')
+    end
+
+    it 'fails to accept when the partner lacks the asked-for bean' do
+      game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[soy])
+
+      expect { game.accept_offer }.to raise_error(BeanBazaar::IllegalMove, 'Bot has no Soy to give')
+      expect(game.offer).not_to be_nil
+    end
+
+    it 'rejects bad offers' do
+      expect { game.propose(partner_index: 0, hand_indexes: [0]) }.to raise_error(BeanBazaar::IllegalMove, "You can't trade with yourself")
+      expect { game.propose(partner_index: 1) }.to raise_error(BeanBazaar::IllegalMove, 'An offer needs at least one card')
+      expect { game.propose(partner_index: 1, face_up_indexes: [5]) }.to raise_error(BeanBazaar::IllegalMove)
+      expect { game.accept_offer }.to raise_error(BeanBazaar::IllegalMove, 'There is no offer to answer')
+      expect { game.decline_offer }.to raise_error(BeanBazaar::IllegalMove, 'There is no offer to answer')
+    end
+
+    it 'blocks a second offer or a direct trade while one waits' do
+      game.propose(partner_index: 1, hand_indexes: [0])
+
+      expect { game.propose(partner_index: 1, hand_indexes: [1]) }.to raise_error(BeanBazaar::IllegalMove, 'Answer the waiting offer first')
+      expect { game.trade(partner_index: 1, hand_indexes: [1]) }.to raise_error(BeanBazaar::IllegalMove, 'Answer the waiting offer first')
+    end
+
+    it 'resets the offer count each turn' do
+      game.propose(partner_index: 1, hand_indexes: [0])
+      game.decline_offer
+      game.trade(partner_index: 1, face_up_indexes: [0, 1])
+      bot.pending.clear
+      game.end_trading
+
+      expect(game.offers_this_turn).to eq(0)
     end
   end
 
@@ -263,7 +349,7 @@ RSpec.describe BeanBazaar::Game do
 
       loaded = described_class.from_h(JSON.parse(JSON.generate(game.to_h)))
 
-      expect(loaded.to_h).to eq(game.to_h)
+      expect(JSON.parse(JSON.generate(loaded.to_h))).to eq(JSON.parse(JSON.generate(game.to_h)))
       expect(loaded.phase).to eq(:trade)
       expect(loaded.players.last.pending).to eq(%i[green])
       expect(loaded.players.first.fields.map(&:bean)).to eq([:blue, :soy])

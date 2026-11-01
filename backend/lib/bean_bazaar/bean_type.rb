@@ -24,6 +24,11 @@ module BeanBazaar
       all.flat_map { |bean_type| Array.new(bean_type.copies, bean_type.key) }
     end
 
+    # Beans needed for the next coin step above `bean_count`; nil once fully paid.
+    def next_step(bean_count)
+      meter.values.select { |beans_needed| beans_needed > bean_count }.min
+    end
+
     def coins_for(bean_count)
       meter.select { |_coins, beans_needed| bean_count >= beans_needed }.keys.max || 0
     end

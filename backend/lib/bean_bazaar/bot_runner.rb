@@ -32,6 +32,7 @@ module BeanBazaar
 
     def waiting_for_human?
       return false if @human_index.nil?
+      return true if @game.offer&.fetch('partner_index') == @human_index
       return @game.players[@human_index].pending.any? if @game.phase == :plant_pending
 
       @game.active_index == @human_index
@@ -46,7 +47,7 @@ module BeanBazaar
       active_bot = bot(@game.active_index)
       return active_bot.play_plant_phase if @game.phase == :plant
 
-      active_bot.play_trade_phase(partner_indexes: bot_indexes - [@game.active_index])
+      active_bot.play_trade_phase(partner_indexes: bot_indexes - [@game.active_index], human_index: @human_index)
     end
   end
 end
