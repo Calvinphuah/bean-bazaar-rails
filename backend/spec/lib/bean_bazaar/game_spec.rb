@@ -353,6 +353,14 @@ RSpec.describe BeanBazaar::Game do
       expect { game.trade(partner_index: 1, hand_indexes: [1]) }.to raise_error(BeanBazaar::IllegalMove, 'Answer the waiting offer first')
     end
 
+    it 'remembers the beans a partner turned down an ask without holding' do
+      game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[chili chili wax soy])
+      game.decline_offer
+
+      # Bot holds one chili and one wax, so only the second chili and the soy were missing.
+      expect(game.lacking).to eq([[], %i[chili soy]])
+    end
+
     it 'resets the offer count each turn' do
       game.propose(partner_index: 1, hand_indexes: [0])
       game.decline_offer
@@ -365,6 +373,16 @@ RSpec.describe BeanBazaar::Game do
   end
 
   describe 'saving and loading' do
+    it 'forgets what a player lacks once they draw, and keeps it through a JSON round trip' do
+      game = described_class.new(players: [calvin, bot], deck: deck, phase: :trade, hand_plants: 1, lacking: [%i[wax], %i[soy]])
+      loaded = described_class.from_h(JSON.parse(JSON.generate(game.to_h)))
+      expect(loaded.lacking).to eq([%i[wax], %i[soy]])
+
+      game.end_trading
+
+      expect(game.lacking).to eq([[], %i[soy]])
+    end
+
     it 'survives a JSON round trip mid-turn' do
       game.plant_from_hand(0)
       game.flip_cards

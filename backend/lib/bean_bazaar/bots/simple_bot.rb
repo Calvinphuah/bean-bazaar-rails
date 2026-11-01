@@ -37,6 +37,11 @@ module BeanBazaar
         plantable_together?(offered) && requested.none? { |card| grows?(card) }
       end
 
+      # The easy bot just says no; it never suggests a smaller deal.
+      def counter_offer(offered:, requested:) # rubocop:disable Lint/UnusedMethodArgument
+        nil
+      end
+
       def grows?(card)
         player.fields.any? { |field| field.bean == card }
       end
@@ -95,21 +100,27 @@ module BeanBazaar
         loop do
           face_up_index = @game.face_up.cards.index { |card| !grows?(card) }
           break if face_up_index.nil?
-          break if !offer(face_up_index, partner_indexes)
+          break if !offer(partner_indexes, face_up_indexes: [face_up_index])
         end
       end
 
-      # Tries a swap for a bean it grows, then a plain gift. False if nobody wants it.
-      def offer(face_up_index, partner_indexes)
-        card = @game.face_up.cards[face_up_index]
+      # Offers face-up or hand cards for a bean it grows when the partner holds one,
+      # otherwise as a gift. False if nobody wants them.
+      def offer(partner_indexes, face_up_indexes: [], hand_indexes: [])
+        cards = face_up_indexes.map { |index| @game.face_up.cards[index] } + hand_indexes.map { |index| player.hand.cards[index] }
 
         partner_indexes.each do |partner_index|
           partner = self.class.new(@game, partner_index)
           wanted_index = @game.players[partner_index].hand.cards.index { |hand_card| grows?(hand_card) }
           requested = wanted_index.nil? ? [] : [@game.players[partner_index].hand.cards[wanted_index]]
-          next if !partner.accepts?(offered: [card], requested: requested)
+          next if !partner.accepts?(offered: cards, requested: requested)
 
-          @game.trade(partner_index: partner_index, face_up_indexes: [face_up_index], partner_hand_indexes: Array(wanted_index))
+          @game.trade(
+            partner_index: partner_index,
+            face_up_indexes: face_up_indexes,
+            hand_indexes: hand_indexes,
+            partner_hand_indexes: Array(wanted_index),
+          )
           return true
         end
         false

@@ -1,9 +1,15 @@
-import type { BotLevel, GameState, Move, TradeOffer } from "./types"
+import type { BeanKey, BotLevel, GameState, Move, TradeOffer } from "./types"
 
 export type QuoteAnswer = "accept" | "decline" | "missing"
 
+// A smaller deal a bot would take after saying no: what you'd give and get.
+export interface TradeCounter {
+  give: BeanKey[]
+  ask: BeanKey[]
+}
+
 export interface Quote {
-  answers: { player: number; answer: QuoteAnswer }[]
+  answers: { player: number; answer: QuoteAnswer; counter?: TradeCounter }[]
 }
 
 // Every response is wrapped in a root key (`game`, `quote`), success or error.

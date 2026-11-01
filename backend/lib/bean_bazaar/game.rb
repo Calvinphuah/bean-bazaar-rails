@@ -13,7 +13,7 @@ module BeanBazaar
     DRAW_COUNT = 3
     LOG_SIZE = 60
 
-    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn
+    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn, :lacking
 
     def self.start(names:, random: Random.new)
       raise ArgumentError, "Bean Bazaar needs #{PLAYER_COUNTS} players" if !PLAYER_COUNTS.cover?(names.size)
@@ -36,12 +36,13 @@ module BeanBazaar
         event_seq: hash.fetch('event_seq', 0),
         offer: hash['offer'],
         offers_this_turn: hash.fetch('offers_this_turn', 0),
+        lacking: hash.fetch('lacking', []).map { |beans| beans.map(&:to_sym) },
       )
     end
 
     def initialize(
       players:, deck:, phase: :plant, active_index: 0, face_up: Hand.new, hand_plants: 0,
-      log: [], event_seq: 0, offer: nil, offers_this_turn: 0
+      log: [], event_seq: 0, offer: nil, offers_this_turn: 0, lacking: []
     )
       @players = players
       @deck = deck
@@ -53,6 +54,9 @@ module BeanBazaar
       @event_seq = event_seq
       @offer = offer
       @offers_this_turn = offers_this_turn
+      # Beans each player has said they hold none of, by turning down an offer
+      # they couldn't meet. Forgotten once that player draws new cards.
+      @lacking = players.each_index.map { |index| lacking.fetch(index, []) }
     end
 
     def to_h
@@ -67,6 +71,7 @@ module BeanBazaar
         event_seq: @event_seq,
         offer: offer,
         offers_this_turn: offers_this_turn,
+        lacking: lacking,
       }
     end
 
@@ -166,6 +171,7 @@ module BeanBazaar
       waiting = require_offer
       partner = player_at(waiting['partner_index'])
       @offer = nil
+      remember_lacking(waiting['partner_index'], waiting['partner_beans'].map(&:to_sym))
       note(:decline, waiting['partner_index'], "#{partner.name} turned down #{active_player.name}'s offer")
     end
 
@@ -251,8 +257,16 @@ module BeanBazaar
       note(:trade, active_index, trade_message(partner, offered, requested))
     end
 
+    # The partner couldn't have met this ask, so others stop asking for those beans.
+    def remember_lacking(player_index, asked)
+      held = players[player_index].hand.cards.tally
+      missing = asked.tally.filter_map { |bean, count| bean if held.fetch(bean, 0) < count }
+      @lacking[player_index] = (lacking[player_index] + missing).uniq
+    end
+
     def finish_turn
       active_player.hand.add(deck.draw(DRAW_COUNT))
+      @lacking[active_index] = []
       return finish if deck.exhausted?
 
       @active_index = (active_index + 1) % players.size

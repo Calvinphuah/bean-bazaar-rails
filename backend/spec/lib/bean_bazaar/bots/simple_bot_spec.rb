@@ -89,6 +89,10 @@ RSpec.describe BeanBazaar::Bots::SimpleBot do
       expect(bot.accepts?(offered: %i[blue soy], requested: [])).to be(true)
     end
 
+    it 'never suggests a smaller deal' do
+      expect(bot.counter_offer(offered: %i[blue red], requested: %i[soy])).to be_nil
+    end
+
     it 'refuses cards it has no room for' do
       game.players.first.plant(:red, 1)
 

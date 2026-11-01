@@ -225,9 +225,11 @@ const youWon = computed(() => props.game.winners.includes(you.value))
         :winner="game.over && game.winners.includes(seat.index)"
         :bubble="bubbleFor(seat.index)"
         :answer="isTrading ? trade.answers.value[seat.index] ?? null : null"
+        :counter="isTrading ? trade.counters.value[seat.index] ?? null : null"
         :can-trade-with="isTrading && trade.answers.value[seat.index] === 'accept'"
         :side="seat.spot === 'left' || seat.spot === 'right' ? seat.spot : 'top'"
         @trade="trade.tradeWith(seat.index)"
+        @counter="trade.takeCounter(seat.index)"
       />
 
       <div class="middle">

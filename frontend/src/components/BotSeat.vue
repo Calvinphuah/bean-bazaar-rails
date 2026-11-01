@@ -3,7 +3,7 @@ import { computed } from "vue"
 import BeanCard from "./BeanCard.vue"
 import { coinText } from "../rules"
 import type { BeanType, TableSnapshot } from "../types"
-import type { QuoteAnswer } from "../api"
+import type { QuoteAnswer, TradeCounter } from "../api"
 
 const props = defineProps<{
   name: string
@@ -16,17 +16,22 @@ const props = defineProps<{
   bubble: string | null
   // This bot's live answer to the offer you are building.
   answer: QuoteAnswer | null
+  // The smaller deal this bot would take instead, after saying no.
+  counter: TradeCounter | null
   canTradeWith: boolean
   // Which edge of the table the bot sits on; its fields face the middle.
   side: "left" | "right" | "top"
 }>()
 
-const emit = defineEmits<{ trade: [] }>()
+const emit = defineEmits<{ trade: []; counter: [] }>()
 
 // A few backs stand for the whole hand; the count says how many. A wide fan
 // would spill off the table edge or under the bot's fields.
 const MAX_BACKS = 6
 const backs = computed(() => Math.min(props.seat.hand_size, MAX_BACKS))
+
+const beanList = (beans: string[]): string => beans.map((bean) => props.beanTypes[bean]?.name ?? bean).join(", ") || "nothing"
+const counterText = computed(() => (props.counter ? `You give ${beanList(props.counter.give)}, you get ${beanList(props.counter.ask)}` : ""))
 
 const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   accept: "Deal!",
@@ -118,6 +123,16 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
         @click="emit('trade')"
       >
         Trade with {{ name }}
+      </button>
+      <!-- A no with a smaller deal attached loads that deal into your trade. -->
+      <button
+        v-else-if="answer === 'decline' && counter"
+        class="small secondary"
+        :title="counterText"
+        :aria-label="`Use ${name}'s counter-offer: ${counterText}`"
+        @click="emit('counter')"
+      >
+        Counter-offer
       </button>
       <span v-else>{{ ANSWER_LABELS[answer] }}</span>
     </div>

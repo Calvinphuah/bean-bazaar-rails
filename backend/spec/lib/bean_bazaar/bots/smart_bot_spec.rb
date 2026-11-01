@@ -83,6 +83,23 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
       expect(game.phase).to eq(:trade)
     end
 
+    it 'skips a bean the human has said they hold none of' do
+      game = game_with(bot, human, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red blue]), lacking: [[], %i[blue]])
+      described_class.new(game, 0).play_trade_phase(partner_indexes: [], human_index: 1)
+
+      expect(game.offer['partner_beans']).to eq(%w[soy])
+    end
+
+    it 'gives a hand card it has no field for to a bot that wants it' do
+      crowded = player('Bot', %i[soy red], fields: [field(:soy, 3), field(:wax, 2)])
+      taker = player('Taker', [])
+      game = game_with(crowded, taker, phase: :trade)
+      described_class.new(game, 0).play_trade_phase(partner_indexes: [1])
+
+      expect(crowded.hand.cards).to eq(%i[soy])
+      expect(taker.pending).to eq(%i[red])
+    end
+
     it 'offers a loose hand card when every face-up card is useful' do
       game = game_with(bot, human, phase: :trade, face_up: BeanBazaar::Hand.new(%i[blue]))
       described_class.new(game, 0).play_trade_phase(partner_indexes: [], human_index: 1)
@@ -163,6 +180,20 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
 
     it 'wants something back for a card the asker needs' do
       expect(smart.accepts?(offered: [], requested: %i[wax])).to be(false)
+    end
+  end
+
+  describe '#counter_offer' do
+    let(:bot) { player('Bot', %i[soy wax], fields: [field(:soy, 3), field]) }
+    let(:smart) { described_class.new(game_with(bot, player('Other', [])), 0) }
+
+    it 'keeps the bean it grows out of the deal and still trades the rest' do
+      expect(smart.accepts?(offered: %i[soy], requested: %i[wax soy])).to be(false)
+      expect(smart.counter_offer(offered: %i[soy], requested: %i[wax soy])).to eq(offered: %i[soy], requested: %i[wax])
+    end
+
+    it 'has no counter when no smaller deal is any good' do
+      expect(smart.counter_offer(offered: [], requested: %i[soy])).to be_nil
     end
   end
 

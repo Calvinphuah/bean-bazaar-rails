@@ -28,6 +28,7 @@ module BeanBazaar
       # Returns early while that offer waits for an answer.
       def play_trade_phase(partner_indexes:, human_index: nil)
         offer_unwanted_cards(partner_indexes)
+        offer_junk_hand(partner_indexes)
         return if propose_to_human(human_index)
 
         @game.end_trading
@@ -48,7 +49,30 @@ module BeanBazaar
         deal_value(offered, requested).positive?
       end
 
+      # A smaller deal it would take instead: it drops whichever card helps it most,
+      # one at a time, until the deal comes out ahead. Nil when nothing is left.
+      def counter_offer(offered:, requested:)
+        until offered.empty? && requested.empty?
+          options = offered.uniq.map { |card| [without_one(offered, card), requested] } +
+            requested.uniq.map { |card| [offered, without_one(requested, card)] }
+          offered, requested = options.max_by { |option| deal_value(*option) }
+          return { offered: offered, requested: requested } if accepts?(offered: offered, requested: requested)
+        end
+      end
+
       private
+
+      def without_one(cards, card)
+        cards.dup.tap { |rest| rest.delete_at(rest.index(card)) }
+      end
+
+      # Hands off hand cards it has no field for, so its next plants stay smooth.
+      def offer_junk_hand(partner_indexes)
+        loop do
+          hand_index = junk_hand_index
+          break if hand_index.nil? || !offer(partner_indexes, hand_indexes: [hand_index])
+        end
+      end
 
       # A third field pays off early, while there are reshuffles left to fill it.
       def buy_field_if_rich
@@ -165,7 +189,7 @@ module BeanBazaar
           partner_index: human_index,
           face_up_indexes: Array(face_up_index),
           hand_indexes: Array(hand_index),
-          partner_beans: Array(wanted_bean),
+          partner_beans: Array(wanted_bean(human_index)),
         )
         true
       end
@@ -175,8 +199,9 @@ module BeanBazaar
         player.hand.cards.rindex { |card| !fits?(card) }
       end
 
-      def wanted_bean
-        growing = player.fields.reject(&:empty?)
+      # Skips beans the human has already said they hold none of.
+      def wanted_bean(human_index)
+        growing = player.fields.reject { |field| field.empty? || @game.lacking[human_index].include?(field.bean) }
         best = growing.min_by { |field| BeanType.find(field.bean).next_step(field.count).to_i - field.count }
         best&.bean
       end

@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from "vue"
-import { quoteTrade, type QuoteAnswer } from "./api"
+import { quoteTrade, type QuoteAnswer, type TradeCounter } from "./api"
 import type { BeanKey, GameState, Move, TradeGive } from "./types"
 
 const QUOTE_DELAY_MS = 250
@@ -17,6 +17,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
   const pickedHand = ref<number[]>([])
   const asks = ref<Record<BeanKey, number>>({})
   const answers = ref<Record<number, QuoteAnswer>>({})
+  const counters = ref<Record<number, TradeCounter>>({})
   const quoting = ref(false)
   // True right after an ask was refused for going past what any bot holds.
   const askCapped = ref(false)
@@ -53,6 +54,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     if (quoting.value) return "Asking the table..."
     const all = Object.values(answers.value)
     if (all.length && all.every((answer) => answer === "missing")) return "Nobody has those beans right now."
+    if (!acceptors.value.length && Object.keys(counters.value).length) return "No takers, but some bots made a counter-offer."
     if (!acceptors.value.length) return "No one wants this deal. Try changing it."
     const names = listNames(acceptors.value.map((player) => game.value?.players[player]?.name ?? ""))
     return acceptors.value.length === 1 ? `${names} will trade.` : `${names} will trade. Pick who on their seat.`
@@ -77,6 +79,25 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     pickedHand.value = []
     asks.value = {}
     answers.value = {}
+    counters.value = {}
+    askCapped.value = false
+  }
+
+  // Loads a bot's counter-offer into the trade: keep only the picks it wants, ask for what it offered.
+  function takeCounter(player: number): void {
+    const counter = counters.value[player]
+    if (!counter) return
+    const wanted = [...counter.give]
+    const keep = (picked: number[], beanAt: (index: number) => BeanKey | undefined) =>
+      picked.filter((index) => {
+        const at = wanted.indexOf(beanAt(index) ?? "")
+        if (at === -1) return false
+        wanted.splice(at, 1)
+        return true
+      })
+    pickedFaceUp.value = keep(pickedFaceUp.value, (index) => game.value?.face_up[index])
+    pickedHand.value = keep(pickedHand.value, (index) => hand.value[index])
+    asks.value = counter.ask.reduce<Record<BeanKey, number>>((all, bean) => ({ ...all, [bean]: (all[bean] ?? 0) + 1 }), {})
     askCapped.value = false
   }
 
@@ -84,6 +105,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     const current = game.value
     if (!current || !isTrading.value || !hasOffer.value) {
       answers.value = {}
+      counters.value = {}
       quoting.value = false
       return
     }
@@ -97,8 +119,12 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
       // A newer edit already asked again; this answer is stale.
       if (request !== quoteRequest) return
       answers.value = Object.fromEntries(quote.answers.map(({ player, answer }) => [player, answer]))
+      counters.value = Object.fromEntries(quote.answers.flatMap(({ player, counter }) => (counter ? [[player, counter]] : [])))
     } catch {
-      if (request === quoteRequest) answers.value = {}
+      if (request === quoteRequest) {
+        answers.value = {}
+        counters.value = {}
+      }
     } finally {
       if (request === quoteRequest) quoting.value = false
     }
@@ -129,6 +155,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     pickedHand,
     asks,
     answers,
+    counters,
     gives,
     status,
     acceptors,
@@ -137,6 +164,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     removeGive: (give: TradeGive) => toggle(give.source === "face_up" ? pickedFaceUp : pickedHand, give.index),
     changeAsk,
     clear,
+    takeCounter,
     tradeWith,
   }
 }

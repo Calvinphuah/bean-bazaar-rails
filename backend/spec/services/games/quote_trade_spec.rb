@@ -43,6 +43,13 @@ RSpec.describe Games::QuoteTrade do
     expect(answers(face_up_indexes: [1])).to eq(1 => 'decline', 2 => 'accept')
   end
 
+  it 'passes on the smaller deal a declining bot would take instead' do
+    # Lima won't give up the wax it grows, but would take your soy for nothing.
+    result = described_class.new(game, hand_indexes: [1], partner_beans: ['wax']).call[:payload][:answers]
+
+    expect(result).to include(player: 2, answer: 'decline', counter: { give: %w[soy], ask: [] })
+  end
+
   it "only quotes during the human's trade phase" do
     game.update!(state: engine.to_h.merge(phase: :plant))
     result = described_class.new(game, face_up_indexes: [0]).call
