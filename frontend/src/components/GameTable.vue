@@ -26,8 +26,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ leave: []; skip: []; tutorialDone: []; tutorial: [] }>()
 
-// Each bot gets a bean character as its face at the table.
-const AVATARS = ["chili", "green", "soy", "red"]
 // Seat spots around the table, clockwise from your left, by number of bots.
 const SEAT_SPOTS: Record<number, string[]> = {
   2: ["top-left", "top-right"],
@@ -58,10 +56,11 @@ const seats = computed(() => {
   const spots = SEAT_SPOTS[count - 1] ?? []
   return Array.from({ length: count - 1 }, (_, offset) => {
     const index = (you.value + offset + 1) % count
-    return { index, spot: spots[offset] ?? "top", avatar: AVATARS[offset] ?? "blue" }
+    // Each bot's portrait is the bean it's named after, e.g. Pinto is /bots/pinto.webp.
+    return { index, spot: spots[offset] ?? "top", avatar: nameOf(index).toLowerCase() }
   })
 })
-const avatarOf = (index: number): string => seats.value.find((seat) => seat.index === index)?.avatar ?? "blue"
+const avatarOf = (index: number): string => nameOf(index).toLowerCase()
 const nameOf = (index: number | null): string => (index === null ? "" : props.game.players[index]?.name ?? "")
 
 // Nothing is clickable while bot moves replay; the live state decides what you may do.

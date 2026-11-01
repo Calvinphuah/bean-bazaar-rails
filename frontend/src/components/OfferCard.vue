@@ -23,7 +23,7 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
   >
     <div class="from">
       <img
-        :src="`/cards/${avatar}.webp`"
+        :src="`/bots/${avatar}.webp`"
         alt=""
       >
       <strong>{{ fromName }} wants to trade</strong>
@@ -102,7 +102,7 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
 <style scoped>
 .offer { width: min(460px, 100%); display: grid; gap: 12px; padding: 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, .6); }
 .from { display: flex; align-items: center; gap: 10px; font-family: "Fraunces", serif; font-size: 20px; }
-.from img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; object-position: 50% 38%; border: 2px solid var(--gold); }
+.from img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
 .deal { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .side { display: grid; justify-items: center; gap: 6px; font-weight: 800; font-size: 13px; }
 .cards { display: flex; gap: 6px; min-height: 120px; align-items: center; }

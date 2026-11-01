@@ -54,7 +54,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
       <div class="plate">
         <div class="avatar">
           <img
-            :src="`/cards/${avatar}.webp`"
+            :src="`/bots/${avatar}.webp`"
             alt=""
           >
           <span
@@ -158,7 +158,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
 .seat.active .plate { box-shadow: 0 0 0 4px var(--gold), 0 0 26px rgba(246, 201, 56, .7); }
 .seat.winner .plate { box-shadow: 0 0 0 4px var(--ok); }
 .avatar { position: relative; width: 44px; height: 44px; flex: none; }
-.avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: 50% 38%; border: 2px solid var(--ink); background: var(--panel); }
+.avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--ink); background: var(--panel); }
 .turn-dot { position: absolute; right: -2px; bottom: -2px; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); border: 2px solid var(--ink); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(1.25); } }
 .who { display: grid; line-height: 1.2; }
