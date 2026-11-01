@@ -101,6 +101,14 @@ module BeanBazaar
       players[active_index]
     end
 
+    # The beans in this game: those for its player count, plus any already in its
+    # cards, so a game dealt before the deck rules changed still shows every card.
+    def bean_types
+      held = deck.draw_pile + deck.discard_pile + face_up.cards +
+             players.flat_map { |player| player.hand.cards + player.pending + player.fields.filter_map(&:bean) }
+      BeanType.all.select { |bean_type| bean_type.min_players <= players.size || held.include?(bean_type.key) }
+    end
+
     def over?
       phase == :over
     end

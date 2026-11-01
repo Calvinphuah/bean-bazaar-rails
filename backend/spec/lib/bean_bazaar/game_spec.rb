@@ -24,6 +24,15 @@ RSpec.describe BeanBazaar::Game do
       expect(game.active_player.name).to eq('Calvin')
     end
 
+    it 'lists the beans for its player count, plus any already in its cards' do
+      small = described_class.start(names: %w[Calvin Bot1 Bot2], random: Random.new(1))
+      calvin.hand.add(%i[coffee])
+
+      expect(small.bean_types.map(&:key)).not_to include(:coffee, :golden)
+      expect(game.bean_types.map(&:key)).to include(:coffee)
+      expect(game.bean_types.map(&:key)).not_to include(:golden)
+    end
+
     it 'rejects too few or too many players' do
       expect { described_class.start(names: %w[Calvin Bot]) }.to raise_error(ArgumentError, 'Bean Bazaar needs 3..5 players')
       expect { described_class.start(names: %w[A B C D E F]) }.to raise_error(ArgumentError)

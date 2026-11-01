@@ -24,7 +24,7 @@ class Api::GameSerializer
       bot_level: @game.bot_level,
       can_undo: @game.undo_states.any?,
       log: @engine.log,
-      bean_types: BeanBazaar::BeanType.for_players(@engine.players.size).map(&:to_h),
+      bean_types: @engine.bean_types.map(&:to_h),
     }
   end
 
