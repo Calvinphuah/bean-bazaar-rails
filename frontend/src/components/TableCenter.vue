@@ -18,6 +18,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ pick: [index: number] }>()
 
+// Each run through the deck is a season; the game ends when the last one runs out.
+const season = computed(() => Math.min(props.table.deck.run_outs + 1, MAX_RUN_OUTS))
+
 const deckEdges = computed(() => Math.min(MAX_EDGES, Math.ceil(props.table.deck.draw / CARDS_PER_EDGE)))
 // Each discard keeps its own scruffy angle and nudge, worked out from its place in
 // the pile, so a card doesn't jump around when more land on top.
@@ -96,17 +99,19 @@ const deckStyle = computed(() => {
         <span class="label">Discard</span>
       </div>
       <div
-        class="reshuffles"
-        data-tour="reshuffles"
-        :title="`The game ends when the deck runs out for the ${MAX_RUN_OUTS}rd time`"
+        class="seasons"
+        data-tour="seasons"
+        title="A new season starts each time the deck runs out. The game ends when the last season's deck runs out."
       >
-        <span>Reshuffles</span>
-        <span
-          v-for="run in MAX_RUN_OUTS"
-          :key="run"
-          class="pip"
-          :class="{ used: run <= table.deck.run_outs }"
-        />
+        <span>Season {{ season }} of {{ MAX_RUN_OUTS }}</span>
+        <span class="bar">
+          <span
+            v-for="run in MAX_RUN_OUTS"
+            :key="run"
+            class="segment"
+            :class="{ past: run < season, now: run === season }"
+          />
+        </span>
       </div>
     </div>
 
@@ -173,9 +178,23 @@ const deckStyle = computed(() => {
   font-variant-numeric: tabular-nums;
   box-shadow: 0 2px 0 var(--ink);
 }
-.reshuffles { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
-.pip { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff6dc; }
-.pip.used { background: var(--accent); }
+.seasons {
+  grid-column: 1 / -1;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 14, 4, .28);
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff6dc;
+}
+.bar { display: flex; gap: 3px; }
+.segment { width: 16px; height: 6px; border-radius: 999px; background: rgba(255, 246, 220, .25); }
+.segment.past { background: var(--gold-dark); }
+.segment.now { background: var(--gold); }
 
 /* Room for two cards even before the flip, so the deck doesn't jump sideways. */
 .face-up { display: flex; gap: 14px; min-height: 160px; min-width: 238px; justify-content: center; align-items: center; }

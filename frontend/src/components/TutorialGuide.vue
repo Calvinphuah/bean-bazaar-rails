@@ -31,9 +31,9 @@ const STEPS = [
     body: "On your trade turn, click cards to give and beans you want. Every bot answers on its seat: Deal!, No thanks, or Don't have it. A Smart bot that says no may suggest a smaller deal instead.",
   },
   {
-    target: "reshuffles",
+    target: "seasons",
     title: "Win the bazaar",
-    body: "A circle fills each time the deck runs out. When all 3 are full the game ends, and whoever has the most coins wins. Good luck!",
+    body: "Each time the deck runs out, a new season starts. When the third season's deck runs out the game ends, and whoever has the most coins wins. Good luck!",
   },
 ]
 
