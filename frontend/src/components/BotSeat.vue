@@ -23,7 +23,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{ trade: [] }>()
 
-const backs = computed(() => Math.min(props.seat.hand_size, 8))
+// A few backs stand for the whole hand; the count says how many. A wide fan
+// would spill off the table edge or under the bot's fields.
+const MAX_BACKS = 6
+const backs = computed(() => Math.min(props.seat.hand_size, MAX_BACKS))
 
 const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   accept: "Deal!",
@@ -78,7 +81,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
           :key="card"
           src="/cards/coin_back.webp"
           alt=""
-          :style="{ transform: `rotate(${(card - (backs + 1) / 2) * 7}deg)` }"
+          :style="{ transform: `rotate(${(card - (backs + 1) / 2) * 5}deg)` }"
         >
         <span class="hand-count">{{ seat.hand_size }}</span>
       </div>
@@ -101,13 +104,6 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
           </template>
         </div>
       </div>
-
-      <div
-        v-if="seat.pending.length"
-        class="pending"
-      >
-        Planting {{ seat.pending.map((bean) => beanTypes[bean]?.name).join(", ") }}
-      </div>
     </div>
 
     <div
@@ -115,14 +111,15 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
       class="answer"
       :class="answer"
     >
-      <span>{{ ANSWER_LABELS[answer] }}</span>
+      <!-- A yes you can act on is just the button; otherwise the answer itself. -->
       <button
-        v-if="canTradeWith"
+        v-if="answer === 'accept' && canTradeWith"
         class="small"
         @click="emit('trade')"
       >
-        Trade
+        Trade with {{ name }}
       </button>
+      <span v-else>{{ ANSWER_LABELS[answer] }}</span>
     </div>
   </div>
 </template>
@@ -206,7 +203,6 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   border-radius: 999px;
   padding: 0 4px;
 }
-.pending { font-size: 11px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); text-align: center; }
 
 .bubble {
   position: absolute;
@@ -259,6 +255,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
 .side-left .answer { left: 0; transform: none; }
 .side-right .answer { left: auto; right: 0; transform: none; }
 .answer.accept { background: #cfe9c5; }
+.answer:has(button) { padding: 0; background: none; box-shadow: none; }
 .answer.decline { background: #f4cfcf; }
 .answer.missing { background: #e5ddd0; color: var(--muted); }
 

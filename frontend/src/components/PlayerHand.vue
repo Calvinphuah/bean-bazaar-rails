@@ -5,7 +5,7 @@ import type { BeanKey, BeanType } from "../types"
 
 const CARD_WIDTH = 132
 // The fan never gets wider than this, so a big late-game hand still fits the screen.
-const MAX_FAN_WIDTH = 1000
+const MAX_FAN_WIDTH = 860
 const MAX_STEP = 96
 const FRONT_SIDE_KEY = "bean-bazaar-front-on-right"
 
@@ -167,7 +167,8 @@ function onDragStart(event: DragEvent): void {
 /* Big cards that run off the bottom of the screen, like a hand held at the table. */
 .hand { position: relative; display: flex; justify-content: center; align-items: flex-end; padding: 22px 20px 0; margin-bottom: -58px; min-height: 150px; }
 .fan { position: relative; display: flex; align-items: flex-end; }
-.swap { position: absolute; right: calc(100% + 18px); bottom: 74px; z-index: 60; white-space: nowrap; }
+/* Clear of the outermost card, which tilts out past the fan's edge. */
+.swap { position: absolute; right: calc(100% + 44px); bottom: 74px; z-index: 60; white-space: nowrap; }
 .slot { position: relative; transition: transform .18s ease, margin .2s ease; }
 .slot:hover { transform: translateY(-46px); z-index: 50 !important; }
 .tilt { position: relative; transform-origin: 50% 130%; transition: transform .2s ease; }

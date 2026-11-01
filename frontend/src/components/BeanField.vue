@@ -65,12 +65,14 @@ function onDrop(): void {
     </div>
 
     <div class="actions">
+      <!-- The instruction names the bean; the button just says where it goes. -->
       <button
         v-if="plantLabel"
         class="small"
+        :aria-label="plantLabel"
         @click="emit('plant')"
       >
-        {{ plantLabel }}
+        Plant here
       </button>
       <button
         v-if="beanType"
