@@ -18,6 +18,8 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
   const asks = ref<Record<BeanKey, number>>({})
   const answers = ref<Record<number, QuoteAnswer>>({})
   const quoting = ref(false)
+  // True right after an ask was refused for going past what any bot holds.
+  const askCapped = ref(false)
 
   let quoteTimer: ReturnType<typeof setTimeout> | null = null
   let quoteRequest = 0
@@ -35,18 +37,25 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     }),
   ])
   const hasOffer = computed(() => gives.value.length + askList.value.length > 0)
+  // No bot can hand over more cards than it holds, so asks stop there.
+  const maxAsk = computed(() => {
+    const current = game.value
+    if (!current) return 0
+    return Math.max(0, ...current.players.filter((_, index) => index !== current.you).map((player) => player.hand_size))
+  })
   const acceptors = computed(() =>
     Object.entries(answers.value).filter(([, answer]) => answer === "accept").map(([player]) => Number(player)),
   )
 
   const status = computed(() => {
+    if (askCapped.value) return `No bot holds more than ${maxAsk.value} cards, so that's the most you can ask for.`
     if (!hasOffer.value) return "Click cards to give and beans you want. Bots answer straight away."
     if (quoting.value) return "Asking the table..."
     const all = Object.values(answers.value)
     if (all.length && all.every((answer) => answer === "missing")) return "Nobody has those beans right now."
     if (!acceptors.value.length) return "No one wants this deal. Try changing it."
     const names = listNames(acceptors.value.map((player) => game.value?.players[player]?.name ?? ""))
-    return `${names} will trade. Press Trade on their seat.`
+    return acceptors.value.length === 1 ? `${names} will trade.` : `${names} will trade. Pick who on their seat.`
   })
 
   function toggle(list: Ref<number[]>, index: number): void {
@@ -54,6 +63,8 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
   }
 
   function changeAsk(bean: BeanKey, change: number): void {
+    askCapped.value = change > 0 && askList.value.length >= maxAsk.value
+    if (askCapped.value) return
     const count = Math.max(0, (asks.value[bean] ?? 0) + change)
     const next = { ...asks.value }
     if (count === 0) delete next[bean]
@@ -66,6 +77,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     pickedHand.value = []
     asks.value = {}
     answers.value = {}
+    askCapped.value = false
   }
 
   async function refreshQuote(): Promise<void> {

@@ -82,6 +82,15 @@ const pendingIndex = computed(() => {
 const pendingCard = computed(() => (pendingIndex.value === null ? null : me.value?.pending[pendingIndex.value] ?? null))
 // Beans you got in trades this turn: locked away from trading until they're planted.
 const lockedPending = computed(() => (!props.replaying && props.game.phase === "trade" ? me.value?.pending ?? [] : []))
+const lockedGroups = computed(() => groupBeans(lockedPending.value))
+// Traded beans to plant, one card per bean with a count, so a big trade stays one row.
+const pendingGroups = computed(() => groupBeans(me.value?.pending ?? []))
+
+function groupBeans(beans: BeanKey[]): { bean: BeanKey; indexes: number[] }[] {
+  const groups = new Map<BeanKey, number[]>()
+  beans.forEach((bean, index) => groups.set(bean, [...(groups.get(bean) ?? []), index]))
+  return [...groups].map(([bean, indexes]) => ({ bean, indexes }))
+}
 const pendingHint = computed(() => {
   const card = pendingCard.value
   if (!card) return ""
@@ -279,14 +288,22 @@ const youWon = computed(() => props.game.winners.includes(you.value))
             >
               <span>Plant after trading:</span>
               <template
-                v-for="(bean, index) in lockedPending"
-                :key="`${bean}-${index}`"
+                v-for="group in lockedGroups"
+                :key="group.bean"
               >
-                <BeanCard
-                  v-if="beanTypes[bean]"
-                  :bean="beanTypes[bean]!"
-                  size="mini"
-                />
+                <span
+                  v-if="beanTypes[group.bean]"
+                  class="locked-card"
+                >
+                  <BeanCard
+                    :bean="beanTypes[group.bean]!"
+                    size="mini"
+                  />
+                  <span
+                    v-if="group.indexes.length > 1"
+                    class="group-count"
+                  >{{ group.indexes.length }}</span>
+                </span>
               </template>
             </div>
           </div>
@@ -346,29 +363,33 @@ const youWon = computed(() => props.game.winners.includes(you.value))
             <div class="pending-body">
               <div class="pending-cards">
                 <template
-                  v-for="(bean, index) in me.pending"
-                  :key="`${bean}-${index}`"
+                  v-for="group in pendingGroups"
+                  :key="group.bean"
                 >
                   <div
-                    v-if="beanTypes[bean]"
+                    v-if="beanTypes[group.bean]"
                     class="pending-card"
                     draggable="true"
-                    @dragstart="pickedPending = index"
+                    @dragstart="pickedPending = group.indexes[0] ?? null"
                   >
                     <span
-                      v-if="index === pendingIndex"
+                      v-if="pendingIndex !== null && group.indexes.includes(pendingIndex)"
                       class="now"
                     >Planting</span>
+                    <span
+                      v-if="group.indexes.length > 1"
+                      class="group-count"
+                    >{{ group.indexes.length }}</span>
                     <button
                       class="card-button"
-                      :aria-pressed="index === pendingIndex"
-                      :aria-label="`Plant the ${beanTypes[bean]!.name} bean next`"
-                      @click="pickedPending = index"
+                      :aria-pressed="pendingIndex !== null && group.indexes.includes(pendingIndex)"
+                      :aria-label="`Plant the ${beanTypes[group.bean]!.name} bean next`"
+                      @click="pickedPending = group.indexes[0] ?? null"
                     >
                       <BeanCard
-                        :bean="beanTypes[bean]!"
+                        :bean="beanTypes[group.bean]!"
                         size="small"
-                        :selected="index === pendingIndex"
+                        :selected="pendingIndex !== null && group.indexes.includes(pendingIndex)"
                       />
                     </button>
                   </div>
@@ -604,6 +625,22 @@ button.big { font-size: 17px; padding: 9px 22px; }
   padding: 1px 8px;
   border-radius: 999px;
   border: 2px solid var(--ink);
+}
+.locked-card { position: relative; }
+.group-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 3;
+  min-width: 20px;
+  padding: 0 4px;
+  text-align: center;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
 }
 .pending-hint { flex: 1; margin: 0; font-size: 13px; font-weight: 800; }
 .locked {

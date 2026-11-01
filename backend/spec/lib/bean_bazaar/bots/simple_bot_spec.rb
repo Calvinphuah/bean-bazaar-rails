@@ -84,6 +84,11 @@ RSpec.describe BeanBazaar::Bots::SimpleBot do
       expect(bot.accepts?(offered: %i[blue], requested: %i[soy])).to be(false)
     end
 
+    it 'needs an empty field for each new bean type' do
+      expect(bot.accepts?(offered: %i[blue red], requested: [])).to be(false)
+      expect(bot.accepts?(offered: %i[blue soy], requested: [])).to be(true)
+    end
+
     it 'refuses cards it has no room for' do
       game.players.first.plant(:red, 1)
 

@@ -34,7 +34,7 @@ module BeanBazaar
 
       # As a trade partner: take cards it can plant, never give away a bean it grows.
       def accepts?(offered:, requested:)
-        offered.all? { |card| fits?(card) } && requested.none? { |card| grows?(card) }
+        plantable_together?(offered) && requested.none? { |card| grows?(card) }
       end
 
       def grows?(card)
@@ -54,6 +54,11 @@ module BeanBazaar
       def wants_second_plant?
         card = player.hand.front
         @game.hand_plants < Game::MAX_HAND_PLANTS && !card.nil? && fits?(card)
+      end
+
+      # Each new bean type needs its own empty field, so two strangers can't share one.
+      def plantable_together?(cards)
+        cards.uniq.count { |card| !grows?(card) } <= player.fields.count(&:empty?)
       end
 
       def fits?(card)

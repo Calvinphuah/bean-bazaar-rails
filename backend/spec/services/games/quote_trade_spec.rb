@@ -38,8 +38,9 @@ RSpec.describe Games::QuoteTrade do
     expect(answers(hand_indexes: [0], partner_beans: ['wax'])).to eq(1 => 'missing', 2 => 'decline')
   end
 
-  it 'quotes a gift to every bot' do
-    expect(answers(face_up_indexes: [1])).to eq(1 => 'accept', 2 => 'accept')
+  it 'quotes a gift to every bot, each judging it for itself' do
+    # Lima grows soy; Pinto keeps its one empty field for the green it plants next.
+    expect(answers(face_up_indexes: [1])).to eq(1 => 'decline', 2 => 'accept')
   end
 
   it "only quotes during the human's trade phase" do

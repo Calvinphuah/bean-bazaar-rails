@@ -6,6 +6,13 @@ module BeanBazaar
     class SmartBot < SimpleBot
       # How many cards past the front of the hand it plans around.
       LOOKAHEAD = 3
+      # Deal scoring, in rough "points" where a coin is worth COIN_VALUE.
+      COIN_VALUE = 3
+      # A bean it plants towards a coin; a bean starting a fresh field is worth less.
+      GROWING_BEAN_VALUE = 2
+      NEW_FIELD_BEAN_VALUE = 1
+      # Every bean the asker wants helps a rival, so a fair swap must pay for it.
+      HELP_COST = 1
 
       def play_plant_phase
         buy_field_if_rich
@@ -34,10 +41,11 @@ module BeanBazaar
         end
       end
 
-      # Takes a deal that leaves it better off: cards it can plant are worth
-      # something, beans it grows are worth keeping, loose hand cards are a burden.
+      # Takes a deal only when it comes out ahead, judging the deal as a whole:
+      # where every offered bean would be planted, what it gives up, and how much
+      # the asker gains. Junk gifts and one-sided swaps get turned down.
       def accepts?(offered:, requested:)
-        offered.sum { |card| incoming_value(card) } - requested.sum { |card| keeping_value(card) } > 0
+        deal_value(offered, requested).positive?
       end
 
       private
@@ -87,24 +95,61 @@ module BeanBazaar
         (field.coins * 10) - (coming * 6) - field.count
       end
 
-      def incoming_value(card)
-        return 3 + step_bonus(card) if grows?(card)
-        return 1 if player.fields.any?(&:empty?)
-
-        -3
+      def deal_value(offered, requested)
+        incoming_value(offered) - requested.sum { |card| keeping_value(card) } - (requested.size * HELP_COST)
       end
 
+      # Plants the offered beans in its head: beans that grow a field come first,
+      # each new bean type takes an empty field, then a field it must dig up.
+      # Fields getting beans from this deal can't be dug up, so a deal with more
+      # new types than it can place is refused outright.
+      def incoming_value(cards)
+        beans = cards.tally
+        free_fields = player.fields.count(&:empty?) - fields_wanted_by_hand(cards)
+        spare_fields = player.fields.reject { |field| field.empty? || beans.key?(field.bean) }.sort_by { |field| uprooting_cost(field) }
+        beans.sort_by { |bean, count| [grows?(bean) ? 0 : 1, -count] }.sum do |bean, count|
+          next growing_value(bean, count) if grows?(bean)
+          next new_field_value(bean, count) if (free_fields -= 1) >= 0
+
+          field = spare_fields.shift
+          return -Float::INFINITY if field.nil?
+
+          new_field_value(bean, count) - uprooting_cost(field)
+        end
+      end
+
+      def growing_value(bean, count)
+        field = player.fields.find { |candidate| candidate.bean == bean }
+        type = BeanType.find(bean)
+        coins_gained = type.coins_for(field.count + count) - type.coins_for(field.count)
+        (count * GROWING_BEAN_VALUE) + (coins_gained * COIN_VALUE)
+      end
+
+      # A fresh field is worth more when its own hand is about to add to it.
+      def new_field_value(bean, count)
+        coming = player.hand.cards.first(LOOKAHEAD + 1).count(bean)
+        ((count + coming) * NEW_FIELD_BEAN_VALUE) + (BeanType.find(bean).coins_for(count + coming) * COIN_VALUE)
+      end
+
+      # Digging up a field throws away the beans that haven't reached a coin yet.
+      def uprooting_cost(field)
+        COIN_VALUE + [field.count - (field.coins * COIN_VALUE), 0].max
+      end
+
+      # An empty field stays free for the front card, which must be planted next turn.
+      # Reserving more than that turns down too many useful trades.
+      def fields_wanted_by_hand(offered)
+        front = player.hand.front
+        front.nil? || grows?(front) || offered.include?(front) ? 0 : 1
+      end
+
+      # What a hand card is worth keeping: a bean it grows is valuable, a card with
+      # nowhere to go is a relief to hand over.
       def keeping_value(card)
-        return 3 if grows?(card)
+        return GROWING_BEAN_VALUE + 1 if grows?(card)
         return 0 if player.fields.any?(&:empty?)
 
         -1
-      end
-
-      # Extra value when this one bean reaches the field's next coin.
-      def step_bonus(card)
-        field = player.fields.find { |candidate| candidate.bean == card }
-        BeanType.find(card).next_step(field.count) == field.count + 1 ? 2 : 0
       end
 
       # Gives the human a card it can't use and asks for the bean that brings its

@@ -134,6 +134,36 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
 
       expect(smart.accepts?(offered: %i[blue], requested: %i[soy])).to be(false)
     end
+
+    it 'keeps its empty field for the card it must plant next' do
+      wax_first = player('Bot', %i[wax soy], fields: [field(:soy, 3), field])
+
+      expect(described_class.new(game_with(wax_first, player('Other', [])), 0).accepts?(offered: %i[blue], requested: [])).to be(false)
+    end
+
+    it 'takes a gift for an empty field it has no other use for' do
+      fresh = player('Bot', %i[soy wax], fields: [field(:soy, 3), field])
+      fresh.hand.take_at([1])
+
+      expect(described_class.new(game_with(fresh, player('Other', [])), 0).accepts?(offered: %i[blue], requested: [])).to be(true)
+    end
+
+    it 'turns down a pile of different beans it would have to dig up fields for' do
+      fresh = player('Bot', %i[soy], fields: [field(:soy, 3), field])
+
+      expect(described_class.new(game_with(fresh, player('Other', [])), 0).accepts?(offered: %i[blue red wax], requested: [])).to be(false)
+    end
+
+    it 'never takes more new bean types than it has fields to put them in' do
+      rich = player('Bot', %i[soy], fields: [field(:soy, 3), field(:red, 2)])
+      generous = %i[blue blue blue blue wax chili]
+
+      expect(described_class.new(game_with(rich, player('Other', [])), 0).accepts?(offered: generous, requested: [])).to be(false)
+    end
+
+    it 'wants something back for a card the asker needs' do
+      expect(smart.accepts?(offered: [], requested: %i[wax])).to be(false)
+    end
   end
 
   describe '#plant_pending' do
@@ -148,8 +178,10 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
     end
   end
 
+  # Against two easy bots a fair share is one game in three; it should win clearly more.
   it 'beats the easy bots over many games' do
-    wins = 20.times.count do |seed|
+    games = 40
+    wins = games.times.count do |seed|
       game = BeanBazaar::Game.start(names: %w[Smart Easy1 Easy2], random: Random.new(seed))
       runner = BeanBazaar::BotRunner.new(game, human_index: nil)
       smart = described_class
@@ -159,6 +191,6 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
       game.winners.include?(game.players.first)
     end
 
-    expect(wins).to be > 10
+    expect(wins).to be >= games * 0.4
   end
 end

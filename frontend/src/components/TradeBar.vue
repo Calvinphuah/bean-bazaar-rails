@@ -21,6 +21,14 @@ const emit = defineEmits<{
 }>()
 
 const beans = computed(() => Object.values(props.beanTypes))
+
+// One chip per bean with a count, so giving 10 or 20 cards still fits one row.
+// A click takes back the card of that bean picked last.
+const giveGroups = computed(() => {
+  const groups = new Map<BeanKey, TradeGive[]>()
+  for (const give of props.gives) groups.set(give.bean, [...(groups.get(give.bean) ?? []), give])
+  return [...groups].map(([bean, cards]) => ({ bean, cards, last: cards[cards.length - 1]! }))
+})
 const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks).length > 0)
 </script>
 
@@ -33,20 +41,24 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
       <h3>You give <span class="hint">(click to take back)</span></h3>
       <div class="chips">
         <button
-          v-for="give in gives"
-          :key="`${give.source}-${give.index}`"
+          v-for="group in giveGroups"
+          :key="group.bean"
           class="chip-button card-button"
-          :title="`Take back ${beanTypes[give.bean]?.name} Bean`"
-          :aria-label="`Take back ${beanTypes[give.bean]?.name} Bean`"
-          @click="emit('remove', give)"
-          @mouseenter="emit('point', give.bean)"
+          :title="`Take back a ${beanTypes[group.bean]?.name} Bean`"
+          :aria-label="`Take back a ${beanTypes[group.bean]?.name} Bean, ${group.cards.length} given`"
+          @click="emit('remove', group.last)"
+          @mouseenter="emit('point', group.bean)"
           @mouseleave="emit('point', null)"
         >
           <img
             class="chip"
-            :src="`/cards/${give.bean}.webp`"
+            :src="`/cards/${group.bean}.webp`"
             alt=""
           >
+          <span
+            v-if="group.cards.length > 1"
+            class="ask-count"
+          >{{ group.cards.length }}</span>
         </button>
         <span
           v-if="!gives.length"
@@ -116,7 +128,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
 h3 { font-size: 14px; }
 .hint { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
 /* Same 8 columns and card size as the asks below, so both rows line up. */
-.chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; min-height: 52px; align-items: center; justify-items: center; }
+.chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; min-height: 52px; padding-top: 4px; align-items: center; justify-items: center; }
 .chips > .hint { grid-column: 1 / -1; justify-self: start; }
 .chip-button { position: relative; padding: 3px; transition: transform .15s ease; }
 .chip-button:hover { transform: translateY(-2px); }
