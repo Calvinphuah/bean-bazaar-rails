@@ -128,10 +128,11 @@ const stacks = computed(() =>
   background: var(--panel);
 }
 .slot { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 25%; }
-.stack { position: relative; width: 16px; height: 24px; }
+/* Tall enough for 4 coins: 3 steps of 4px plus one coin, with a little air on top. */
+.stack { position: relative; width: 16px; height: 29px; }
 .stack img { position: absolute; left: 0; width: 16px; }
 .beans { font-family: "Fraunces", serif; font-weight: 900; font-size: 10px; line-height: 1; color: var(--ink); }
-.full .meter { margin-top: 5px; padding: 4px 2px 3px; }
+.full .meter { margin-top: 5px; padding: 7px 2px 3px; }
 .full .stack { width: 26px; height: 40px; }
 .full .stack img { width: 26px; }
 .full .beans { font-size: 14px; }
