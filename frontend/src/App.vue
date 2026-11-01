@@ -4,12 +4,14 @@ import GameTable from "./components/GameTable.vue"
 import StartScreen from "./components/StartScreen.vue"
 import TutorialGuide from "./components/TutorialGuide.vue"
 import { useGame } from "./useGame"
+import { useSound } from "./useSound"
 import type { BotLevel } from "./types"
 
 const TUTORIAL_KEY = "bean-bazaar-tutorial-seen"
 const ERROR_MS = 4000
 
 const { game, table, error, busy, replaying, start, move, resume, leave, skipReplay } = useGame()
+const sound = useSound()
 const showTutorial = ref(false)
 let errorTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -33,6 +35,7 @@ function closeTutorial(): void {
 
 async function deal(botCount: number, botLevel: BotLevel): Promise<void> {
   const started = await start(botCount, botLevel)
+  if (started) sound.play("deal")
   if (started && !tutorialSeen()) showTutorial.value = true
 }
 
@@ -41,6 +44,15 @@ watch(error, (message) => {
   if (errorTimer) clearTimeout(errorTimer)
   if (message) errorTimer = setTimeout(() => { error.value = null }, ERROR_MS)
 })
+
+// Every replayed move gets its sound, yours and the bots'; a win gets the big chips.
+watch(replaying, (event) => sound.cue(event, game.value))
+watch(
+  () => !!game.value?.over && !replaying.value,
+  (finished) => {
+    if (finished && game.value?.winners.includes(game.value.you)) sound.play("harvest-big")
+  },
+)
 
 onMounted(resume)
 </script>
@@ -64,11 +76,15 @@ onMounted(resume)
     :busy="busy"
     :replaying="replaying"
     :show-tutorial="showTutorial"
+    :music-on="sound.musicOn.value"
+    :sound-on="sound.soundOn.value"
     :move="move"
     @leave="leave"
     @skip="skipReplay"
     @tutorial="showTutorial = true"
     @tutorial-done="closeTutorial"
+    @toggle-music="sound.toggleMusic"
+    @toggle-sound="sound.toggleSound"
   />
 
   <template v-else>
