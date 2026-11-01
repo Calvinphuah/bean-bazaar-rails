@@ -102,6 +102,17 @@ RSpec.describe BeanBazaar::Game do
       expect(calvin.pending).to eq(%i[chili])
     end
 
+    it "keeps traded beans out of further trades until they're planted" do
+      game.trade(partner_index: 1, face_up_indexes: [0], partner_hand_indexes: [1])
+
+      expect(calvin.hand.cards).to eq(%i[soy red])
+      expect(bot.hand.cards).to eq(%i[wax])
+      expect { game.trade(partner_index: 1, hand_indexes: [2]) }.to raise_error(BeanBazaar::IllegalMove)
+      expect { game.trade(partner_index: 1, partner_hand_indexes: [1]) }.to raise_error(BeanBazaar::IllegalMove)
+      expect(calvin.pending).to eq(%i[chili])
+      expect(bot.pending).to eq(%i[green])
+    end
+
     it 'rejects an unknown partner' do
       expect { game.trade(partner_index: 5, hand_indexes: [0]) }.to raise_error(BeanBazaar::IllegalMove, 'There is no player 5')
     end

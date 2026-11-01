@@ -75,6 +75,14 @@ const pendingIndex = computed(() => {
   return pickedPending.value !== null && pickedPending.value < pending.length ? pickedPending.value : 0
 })
 const pendingCard = computed(() => (pendingIndex.value === null ? null : me.value?.pending[pendingIndex.value] ?? null))
+// Beans you got in trades this turn: locked away from trading until they're planted.
+const lockedPending = computed(() => (!props.replaying && props.game.phase === "trade" ? me.value?.pending ?? [] : []))
+const pendingHint = computed(() => {
+  const card = pendingCard.value
+  if (!card) return ""
+  if (!myFields.value.some((field) => accepts(field, card))) return `No field can take your ${beanName(card)}: harvest a field first.`
+  return `Drag your ${beanName(card)} onto a field, or press Plant ${beanName(card)}.`
+})
 const canBuyField = computed(() =>
   live.value && !!me.value && me.value.fields.length < MAX_FIELDS && me.value.coins >= THIRD_FIELD_PRICE,
 )
@@ -108,7 +116,8 @@ const instruction = computed(() => {
   if (props.replaying) return `${nameOf(props.replaying.player) || "The table"} is playing...`
   if (props.game.over) return ""
   if (offer.value) return `${nameOf(offer.value.from)} is offering you a deal.`
-  if (pendingCard.value) return `Plant the ${beanName(pendingCard.value)} you got: press Plant on a field, or pick another card first.`
+  // The traded-beans panel gives its own instructions.
+  if (pendingCard.value) return ""
   if (!myTurn.value) return `${nameOf(props.game.active_index)} is playing...`
   if (props.game.phase === "plant" && props.game.hand_plants === 0) {
     const card = frontCard.value
@@ -246,17 +255,35 @@ const youWon = computed(() => props.game.winners.includes(you.value))
           class="action"
           data-tour="action"
         >
-          <!-- Your plate matches the bots': who you are and what you've earned. -->
-          <div
-            class="my-plate"
-            :class="{ active: myTurn && !replaying }"
-          >
-            <img
-              src="/cards/coin.webp"
-              alt=""
+          <div class="plate-row">
+            <!-- Your plate matches the bots': who you are and what you've earned. -->
+            <div
+              class="my-plate"
+              :class="{ active: myTurn && !replaying }"
             >
-            <strong>You</strong>
-            <span>{{ coinText(myTable?.coins ?? 0) }}</span>
+              <img
+                src="/cards/coin.webp"
+                alt=""
+              >
+              <strong>You</strong>
+              <span>{{ coinText(myTable?.coins ?? 0) }}</span>
+            </div>
+            <div
+              v-if="lockedPending.length"
+              class="locked"
+            >
+              <span>Plant after trading:</span>
+              <template
+                v-for="(bean, index) in lockedPending"
+                :key="`${bean}-${index}`"
+              >
+                <BeanCard
+                  v-if="beanTypes[bean]"
+                  :bean="beanTypes[bean]!"
+                  size="mini"
+                />
+              </template>
+            </div>
           </div>
           <TradeBar
             v-if="isTrading"
@@ -300,28 +327,49 @@ const youWon = computed(() => props.game.winners.includes(you.value))
 
           <div
             v-if="pendingCard && me"
-            class="pending"
+            class="pending panel"
           >
-            <span>To plant now</span>
-            <div class="pending-cards">
-              <template
-                v-for="(bean, index) in me.pending"
-                :key="`${bean}-${index}`"
-              >
-                <button
-                  v-if="beanTypes[bean]"
-                  class="card-button"
-                  :aria-pressed="index === pendingIndex"
-                  :aria-label="`Plant the ${beanTypes[bean]!.name} bean next`"
-                  @click="pickedPending = index"
+            <div class="pending-head">
+              <strong>Plant your traded beans</strong>
+              <span class="left">{{ me.pending.length }} left</span>
+            </div>
+            <p class="pending-rule">
+              Traded beans can't be traded again. Plant every one now.
+            </p>
+            <div class="pending-body">
+              <div class="pending-cards">
+                <template
+                  v-for="(bean, index) in me.pending"
+                  :key="`${bean}-${index}`"
                 >
-                  <BeanCard
-                    :bean="beanTypes[bean]!"
-                    size="mini"
-                    :selected="index === pendingIndex"
-                  />
-                </button>
-              </template>
+                  <div
+                    v-if="beanTypes[bean]"
+                    class="pending-card"
+                    draggable="true"
+                    @dragstart="pickedPending = index"
+                  >
+                    <span
+                      v-if="index === pendingIndex"
+                      class="now"
+                    >Planting</span>
+                    <button
+                      class="card-button"
+                      :aria-pressed="index === pendingIndex"
+                      :aria-label="`Plant the ${beanTypes[bean]!.name} bean next`"
+                      @click="pickedPending = index"
+                    >
+                      <BeanCard
+                        :bean="beanTypes[bean]!"
+                        size="small"
+                        :selected="index === pendingIndex"
+                      />
+                    </button>
+                  </div>
+                </template>
+              </div>
+              <p class="pending-hint">
+                {{ pendingHint }}
+              </p>
             </div>
           </div>
         </div>
@@ -475,6 +523,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
   font-size: 14px;
 }
 .action { width: 320px; display: grid; gap: 10px; align-content: end; justify-items: start; }
+.plate-row { display: flex; gap: 8px; align-items: center; }
 .my-plate {
   display: flex;
   align-items: center;
@@ -508,8 +557,43 @@ const youWon = computed(() => props.game.winners.includes(you.value))
 @keyframes spin { to { transform: rotate(360deg); } }
 .buttons { display: flex; gap: 8px; }
 button.big { font-size: 17px; padding: 9px 22px; }
-.pending { display: grid; gap: 6px; font-size: 13px; font-weight: 800; color: var(--gold); }
-.pending-cards { display: flex; gap: 6px; }
+.pending { width: 430px; display: grid; gap: 8px; padding: 12px 14px; box-shadow: 0 0 0 4px var(--gold), 0 10px 24px rgba(0, 0, 0, .4); }
+.pending-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pending-head strong { font-family: "Fraunces", serif; font-size: 17px; }
+.left { flex: none; padding: 1px 10px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; }
+.pending-rule { margin: 0; font-size: 12px; color: var(--muted); }
+.pending-body { display: flex; gap: 14px; align-items: center; }
+.pending-cards { flex: none; max-width: 290px; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0 10px; }
+.pending-card { position: relative; cursor: grab; }
+.now {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  white-space: nowrap;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+}
+.pending-hint { flex: 1; margin: 0; font-size: 13px; font-weight: 800; }
+.locked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 246, 220, .95);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .3);
+}
 
 .log-spot { position: fixed; right: 16px; top: 60px; z-index: 20; }
 .overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(20, 14, 10, .72); }
