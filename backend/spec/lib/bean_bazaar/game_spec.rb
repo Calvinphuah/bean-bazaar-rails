@@ -207,6 +207,19 @@ RSpec.describe BeanBazaar::Game do
       expect(game.winners).to eq([calvin])
     end
 
+    it 'breaks a tie on coins by cards left in hand' do
+      tied = %w[Ann Bea].map { |name| BeanBazaar::Player.new(name: name, hand: BeanBazaar::Hand.new, coin_cards: %i[red]) }
+      tied.last.hand.add(%i[soy])
+      over = described_class.new(players: tied, deck: BeanBazaar::Deck.new(draw_pile: []), phase: :over)
+
+      expect(over.winners).to eq([tied.last])
+    end
+
+    it 'logs a final harvest for each player with beans left, before the game over note' do
+      expect(texts(game).last(2)).to eq(['Calvin earned 1 coin in the final harvest', 'The deck ran out for the third time. Game over!'])
+      expect(game.log[-2]).to include(type: :final_harvest, player: 0)
+    end
+
     it 'blocks further moves' do
       expect { game.harvest(player_index: 0, field_index: 0) }.to raise_error(BeanBazaar::IllegalMove, 'The game is over')
       expect { game.buy_third_field(player_index: 0) }.to raise_error(BeanBazaar::IllegalMove, 'The game is over')

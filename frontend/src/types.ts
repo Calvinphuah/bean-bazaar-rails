@@ -41,7 +41,7 @@ export interface TableSnapshot {
 }
 
 export type EventType =
-  | "plant" | "flip" | "trade" | "offer" | "decline" | "keep" | "harvest" | "buy_field" | "turn" | "game_over"
+  | "plant" | "flip" | "trade" | "offer" | "decline" | "keep" | "harvest" | "buy_field" | "turn" | "final_harvest" | "game_over"
 
 export interface LogEvent {
   seq: number

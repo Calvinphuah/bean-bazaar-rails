@@ -9,6 +9,10 @@ const STORAGE_KEY = "bean-bazaar-game-id"
 const BOT_STEP_MS = 900
 const FLIP_STEP_MS = 1100
 const OWN_STEP_MS = 220
+// A plant is easy to follow, and after a trade every bot plants in a row, so these go quicker.
+const PLANT_STEP_MS = 320
+// Each table being cashed in at the end gets a moment, yours included.
+const FINAL_HARVEST_STEP_MS = 1200
 
 // localStorage can throw in private windows; resuming is only a convenience.
 function savedId(): number | null {
@@ -45,8 +49,10 @@ export function useGame() {
   )
 
   function stepDuration(event: LogEvent): number {
+    if (event.type === "final_harvest") return FINAL_HARVEST_STEP_MS
     if (event.player === game.value?.you) return OWN_STEP_MS
-    return event.type === "flip" ? FLIP_STEP_MS : BOT_STEP_MS
+    if (event.type === "flip") return FLIP_STEP_MS
+    return event.type === "plant" ? PLANT_STEP_MS : BOT_STEP_MS
   }
 
   function playNext(): void {

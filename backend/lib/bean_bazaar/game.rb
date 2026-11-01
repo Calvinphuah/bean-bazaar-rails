@@ -100,8 +100,9 @@ module BeanBazaar
     def winners
       raise IllegalMove, "The game isn't over yet" if !over?
 
-      top = players.map(&:coins).max
-      players.select { |player| player.coins == top }
+      # As in Bohnanza, a tie on coins goes to whoever has more cards left in hand.
+      top = players.map { |player| [player.coins, player.hand.size] }.max
+      players.select { |player| [player.coins, player.hand.size] == top }
     end
 
     def plant_from_hand(field_index)
@@ -280,12 +281,20 @@ module BeanBazaar
     def finish
       @offer = nil
       deck.discard(face_up.take_all)
-      players.each do |player|
-        deck.discard(player.pending.slice!(0..))
-        deck.discard(player.harvest_all)
-      end
+      players.each { |player| deck.discard(player.pending.slice!(0..)) }
+      players.each_index { |index| final_harvest(index) }
       @phase = :over
       note(:game_over, nil, 'The deck ran out for the third time. Game over!')
+    end
+
+    # One log entry per player, so the replay shows each table being cashed in.
+    def final_harvest(player_index)
+      player = players[player_index]
+      return if player.fields.all?(&:empty?)
+
+      coins_before = player.coins
+      deck.discard(player.harvest_all)
+      note(:final_harvest, player_index, "#{player.name} earned #{coin_text(player.coins - coins_before)} in the final harvest")
     end
 
     # @param type [Symbol] what happened: plant, flip, trade, offer, harvest, turn...

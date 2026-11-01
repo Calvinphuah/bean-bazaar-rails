@@ -13,7 +13,7 @@ import TradeBar from "./TradeBar.vue"
 import TutorialGuide from "./TutorialGuide.vue"
 import { MAX_FIELDS, MAX_HAND_PLANTS, THIRD_FIELD_PRICE, accepts, canHarvest, coinText } from "../rules"
 import { useTrade } from "../useTrade"
-import type { BeanKey, BeanType, FieldState, GameState, LogEvent, Move, TableSnapshot } from "../types"
+import type { BeanKey, BeanType, FieldState, GameState, LogEvent, Move, PlayerState, TableSnapshot } from "../types"
 
 const props = defineProps<{
   game: GameState
@@ -164,12 +164,62 @@ function plantInto(fieldIndex: number): void {
   }
 }
 
+// What each player's final harvest added, read off the coin counts around it in the log.
+const finalHarvest = computed(() => {
+  const log = props.game.log
+  return Object.fromEntries(
+    log.flatMap((event, at) => {
+      const before = log[at - 1]
+      if (event.type !== "final_harvest" || event.player === null || !before) return []
+      const earned = (event.table.players[event.player]?.coins ?? 0) - (before.table.players[event.player]?.coins ?? 0)
+      return [[event.player, earned]]
+    }),
+  ) as Record<number, number>
+})
+
+// Ranked like the winners: coins, then cards left in hand. Players level on both share a place.
+const ahead = (left: PlayerState, right: PlayerState): boolean =>
+  left.coins > right.coins || (left.coins === right.coins && left.hand_size > right.hand_size)
 const standings = computed(() =>
   props.game.players
-    .map((player, index) => ({ index, name: player.name, coins: player.coins }))
-    .sort((left, right) => right.coins - left.coins),
+    .map((player, index) => ({
+      index,
+      name: player.name,
+      coins: player.coins,
+      handSize: player.hand_size,
+      place: 1 + props.game.players.filter((other) => ahead(other, player)).length,
+      winner: props.game.winners.includes(index),
+      avatar: index === you.value ? null : avatarOf(index),
+      finalHarvest: finalHarvest.value[index] ?? 0,
+    }))
+    .sort((left, right) => right.coins - left.coins || right.handSize - left.handSize),
 )
 const youWon = computed(() => props.game.winners.includes(you.value))
+// Someone matched the winner's coins but lost on cards in hand, so say why.
+const wonOnCards = computed(() => {
+  const top = standings.value[0]
+  return !!top && standings.value.some((entry) => !entry.winner && entry.coins === top.coins)
+})
+const myStanding = computed(() => standings.value.find((entry) => entry.index === you.value))
+const winnerNames = computed(() => standings.value.filter((entry) => entry.winner).map((entry) => entry.name))
+const resultTitle = computed(() => {
+  if (youWon.value) return winnerNames.value.length > 1 ? "You share the win!" : "You win the bazaar!"
+  return `${winnerNames.value.join(" and ")} ${winnerNames.value.length > 1 ? "share" : "wins"} the bazaar`
+})
+const resultLine = computed(() => {
+  const mine = myStanding.value
+  if (!mine) return ""
+  const best = standings.value[0]?.coins ?? 0
+  const runnerUp = standings.value.find((entry) => !entry.winner)?.coins ?? best
+  if (youWon.value) return best > runnerUp ? `${coinText(best - runnerUp)} ahead of 2nd place.` : "Nobody could catch you."
+  return `You came ${ordinal(mine.place)}, ${coinText(best - mine.coins)} behind.`
+})
+// Only a win gets the shower of coins.
+const CONFETTI_PIECES = 18
+
+function ordinal(place: number): string {
+  return ["1st", "2nd", "3rd", "4th", "5th"][place - 1] ?? `${place}th`
+}
 </script>
 
 <template>
@@ -504,18 +554,49 @@ const youWon = computed(() => props.game.winners.includes(you.value))
         aria-modal="true"
         aria-labelledby="game-over-title"
       >
-        <div class="panel result">
+        <div
+          v-if="youWon"
+          class="confetti"
+          aria-hidden="true"
+        >
+          <img
+            v-for="piece in CONFETTI_PIECES"
+            :key="piece"
+            src="/cards/coin.webp"
+            alt=""
+            :style="{ left: `${(piece * 53) % 100}%`, animationDelay: `${(piece % 6) * .22}s`, animationDuration: `${2.4 + (piece % 4) * .5}s` }"
+          >
+        </div>
+        <div
+          class="panel result"
+          :class="{ won: youWon }"
+        >
+          <p class="kicker">
+            The deck ran out for the last time
+          </p>
           <h2 id="game-over-title">
-            {{ youWon ? "You win the bazaar!" : "Game over" }}
+            {{ resultTitle }}
           </h2>
+          <p class="result-line">
+            {{ resultLine }}
+          </p>
           <ol>
             <li
-              v-for="(entry, place) in standings"
+              v-for="entry in standings"
               :key="entry.index"
-              :class="{ you: entry.index === you }"
+              :class="{ you: entry.index === you, winner: entry.winner }"
             >
-              <span class="place">{{ place + 1 }}</span>
-              <span class="who">{{ entry.name }}</span>
+              <span class="place">{{ entry.winner ? "👑" : entry.place }}</span>
+              <img
+                class="face"
+                :src="entry.avatar ? `/bots/${entry.avatar}.webp` : '/cards/coin.webp'"
+                alt=""
+              >
+              <span class="who">
+                {{ entry.name }}
+                <small v-if="entry.winner && wonOnCards">Won the tie with {{ entry.handSize }} cards in hand</small>
+                <small v-else-if="entry.finalHarvest">+{{ coinText(entry.finalHarvest) }} in the final harvest</small>
+              </span>
               <span class="score">{{ coinText(entry.coins) }}</span>
             </li>
           </ol>
@@ -691,15 +772,33 @@ button.big { font-size: 17px; padding: 9px 22px; }
 .payouts-header { display: flex; justify-content: space-between; align-items: center; }
 .payouts p { margin: 0; }
 .payout-cards { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-.result { width: min(420px, 100%); display: grid; gap: 16px; padding: 24px; text-align: center; }
-.result h2 { font-size: 30px; }
+.result { position: relative; width: min(460px, 100%); display: grid; gap: 14px; padding: 26px 24px 24px; text-align: center; }
+.result.won { box-shadow: 0 0 0 4px var(--gold), 0 0 60px rgba(246, 201, 56, .55), 0 18px 40px rgba(0, 0, 0, .6); animation: cheer .6s ease-out; }
+@keyframes cheer { from { transform: scale(.85); } 60% { transform: scale(1.04); } }
+.kicker { margin: 0; font-size: 13px; color: var(--muted); }
+.result h2 { font-size: 32px; line-height: 1.1; }
+.result.won h2 { color: var(--accent); }
+.result-line { margin: -6px 0 4px; font-weight: 700; }
 .result ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.result li { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: var(--panel-dark); text-align: left; }
-.result li:first-child { background: var(--gold); }
+.result li { display: grid; grid-template-columns: 30px 36px 1fr auto; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 12px; background: var(--panel-dark); text-align: left; border: 2px solid transparent; }
+.result li.winner { background: var(--gold); }
+/* Your row is outlined, so you find yourself at a glance whatever your place. */
+.result li.you { border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); }
 .result li.you .who { font-weight: 800; }
-.place { font-family: "Fraunces", serif; font-weight: 900; font-size: 20px; }
+.face { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--ink); background: var(--panel); }
+.who { display: grid; line-height: 1.2; }
+.who small { font-size: 11px; font-weight: 600; color: var(--muted); }
+.winner .who small { color: var(--ink); }
+.place { font-family: "Fraunces", serif; font-weight: 900; font-size: 20px; text-align: center; }
 .score { font-weight: 800; }
 .result button { justify-self: center; }
+.confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti img { position: absolute; top: -40px; width: 28px; animation: fall linear infinite; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  .result.won { animation: none; }
+}
 
 .slide-enter-active, .slide-leave-active { transition: all .2s ease; }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateX(20px); }
