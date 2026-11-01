@@ -9,6 +9,7 @@ class Games::MakeMove < ApplicationService
 
     # helper
     @engine = nil
+    @state_before = nil
   end
 
   def call
@@ -16,6 +17,7 @@ class Games::MakeMove < ApplicationService
       load_game
       apply_move
       play_bot_turns
+      remember_undo
       save_game
 
       @success = true
@@ -30,6 +32,7 @@ class Games::MakeMove < ApplicationService
   def load_game
     @game.lock!
     @engine = @game.engine
+    @state_before = @engine.to_h.deep_stringify_keys
   end
 
   def apply_move
@@ -37,6 +40,7 @@ class Games::MakeMove < ApplicationService
     check_offer
 
     case move_type
+    when 'undo' then undo
     when 'plant_from_hand' then @engine.plant_from_hand(number(:field_index))
     when 'flip_cards' then @engine.flip_cards
     when 'trade' then trade
@@ -52,6 +56,28 @@ class Games::MakeMove < ApplicationService
 
   def play_bot_turns
     @game.bot_runner(@engine).run
+  end
+
+  # Puts the table back as it was before the human's last undoable move.
+  def undo
+    state = @game.undo_states.pop || illegal!('nothing_to_undo')
+    @engine = BeanBazaar::Game.from_h(state)
+  end
+
+  # Keeps the state from before an undoable move, as long as the move revealed
+  # nothing and no bot acted; anything else wipes the history.
+  def remember_undo
+    return if move_type == 'undo'
+
+    @game.undo_states = undoable? ? (@game.undo_states + [@state_before]).last(Games::MAX_UNDOS) : []
+  end
+
+  # Saved log entries have string keys and fresh ones symbol keys, so compare them as strings.
+  def undoable?
+    return false if !Games::UNDOABLE_MOVES.include?(move_type)
+
+    seen = @state_before['event_seq']
+    @engine.log.map(&:stringify_keys).all? { |event| event['seq'] <= seen || Games::UNDOABLE_EVENTS.include?(event['type'].to_s) }
   end
 
   def save_game

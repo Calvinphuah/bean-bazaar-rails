@@ -31,6 +31,37 @@ RSpec.describe Games::MakeMove do
     expect(result[:extra_params][:alert]).to eq(message)
   end
 
+  describe 'undo' do
+    it 'takes back plants and harvests one at a time' do
+      move('plant_from_hand', field_index: 0)
+      move('harvest', field_index: 0)
+      expect(game.reload.undo_states.size).to eq(2)
+
+      move('undo')
+      expect(saved.players.first.fields.first.bean).to eq(:blue)
+      move('undo')
+      expect(saved.players.first.hand.cards).to eq(%i[blue soy chili])
+      expect(saved.hand_plants).to eq(0)
+      expect(game.reload.undo_states).to be_empty
+    end
+
+    it 'wipes the history once cards are flipped' do
+      move('plant_from_hand', field_index: 0)
+      move('flip_cards')
+
+      expect(game.reload.undo_states).to be_empty
+      expect_alert(move('undo'), "There's nothing to undo")
+    end
+
+    it "won't take back a plant that flipped the cards for you" do
+      move('plant_from_hand', field_index: 0)
+      move('plant_from_hand', field_index: 1)
+
+      expect(saved.phase).to eq(:trade)
+      expect(game.reload.undo_states).to be_empty
+    end
+  end
+
   it 'plants from hand and saves the game' do
     result = move('plant_from_hand', field_index: 0)
 

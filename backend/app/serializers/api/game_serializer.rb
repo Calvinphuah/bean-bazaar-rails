@@ -20,6 +20,7 @@ class Api::GameSerializer
       players: @engine.players.each_with_index.map { |player, index| player_json(player, index) },
       offer: offer_json,
       bot_level: @game.bot_level,
+      can_undo: @game.undo_states.any?,
       log: @engine.log,
       bean_types: BeanBazaar::BeanType.all.map(&:to_h),
     }

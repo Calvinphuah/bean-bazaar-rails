@@ -337,6 +337,14 @@ const youWon = computed(() => props.game.winners.includes(you.value))
           </p>
           <div class="buttons">
             <button
+              v-if="live && game.can_undo"
+              class="secondary"
+              title="Take back your last plant, harvest or field purchase"
+              @click="move({ type: 'undo' })"
+            >
+              ↶ Undo
+            </button>
+            <button
               v-if="replaying"
               class="secondary"
               @click="emit('skip')"

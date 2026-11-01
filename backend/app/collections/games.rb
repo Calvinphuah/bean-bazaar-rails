@@ -22,4 +22,12 @@ class Games
 
   # Answers to an offer a bot made to the human, allowed on the bot's turn.
   OFFER_ANSWERS = %w[accept_offer decline_offer].freeze
+
+  # Moves the human can take back: they reveal no cards and no bot reacts to them.
+  UNDOABLE_MOVES = %w[plant_from_hand harvest plant_pending buy_third_field].freeze
+  # Log events those moves may add; any other new event (a flip, a trade, a new turn)
+  # means something happened that can't be taken back.
+  UNDOABLE_EVENTS = %w[plant harvest buy_field].freeze
+  # How many moves back the human can go.
+  MAX_UNDOS = 20
 end

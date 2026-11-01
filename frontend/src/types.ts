@@ -71,6 +71,8 @@ export interface GameState {
   players: PlayerState[]
   offer: Offer | null
   bot_level: BotLevel
+  // Your last plant, harvest or field purchase can be taken back.
+  can_undo: boolean
   log: LogEvent[]
   bean_types: BeanType[]
 }
@@ -88,6 +90,7 @@ export interface TradeOffer {
 export type Move =
   | { type: "plant_from_hand"; field_index: number }
   | { type: "flip_cards" }
+  | { type: "undo" }
   | { type: "end_trading" }
   | { type: "buy_third_field" }
   | { type: "accept_offer" }

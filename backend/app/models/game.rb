@@ -8,6 +8,7 @@ class Game < ApplicationRecord
     BeanBazaar::Game.from_h(state)
   end
 
+  # Also saves undo_states, which the move service changes alongside the state.
   def store(engine)
     update!(state: engine.to_h)
   end

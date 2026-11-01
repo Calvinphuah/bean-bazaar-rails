@@ -15,5 +15,6 @@ en:
         no_offer: "There is no offer waiting for you"
         unknown_move: "Unknown move: %{type}"
         wait_for_turn: "Wait for your turn"
+        nothing_to_undo: "There's nothing to undo"
         not_a_number: "%{key} must be a number"
         not_a_list: "%{key} must be a list of numbers"
