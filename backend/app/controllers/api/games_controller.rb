@@ -4,9 +4,13 @@ class Api::GamesController < Api::BaseController
   # POST: /api/games
   # @overload create
   #   @param bot_count [Integer] how many bots to play against, default 3
+  #   @param bot_level [String] "easy" or "smart", default smart
   #   @return [JSON] object: { game }
   def create
-    result = Games::Create.new(params.fetch(:bot_count, Games::DEFAULT_BOT_COUNT)).call
+    result = Games::Create.new(
+      params.fetch(:bot_count, Games::DEFAULT_BOT_COUNT),
+      params.fetch(:bot_level, Games::DEFAULT_BOT_LEVEL),
+    ).call
     render_result(result, success_code: :created)
   end
 

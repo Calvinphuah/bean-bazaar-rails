@@ -34,6 +34,7 @@ class Games::MakeMove < ApplicationService
 
   def apply_move
     check_turn
+    check_offer
 
     case move_type
     when 'plant_from_hand' then @engine.plant_from_hand(number(:field_index))
@@ -43,12 +44,14 @@ class Games::MakeMove < ApplicationService
     when 'plant_pending' then plant_pending
     when 'harvest' then @engine.harvest(player_index: human_index, field_index: number(:field_index))
     when 'buy_third_field' then @engine.buy_third_field(player_index: human_index)
+    when 'accept_offer' then @engine.accept_offer
+    when 'decline_offer' then @engine.decline_offer
     else illegal!('unknown_move', type: move_type)
     end
   end
 
   def play_bot_turns
-    BeanBazaar::BotRunner.new(@engine, human_index: human_index).run
+    @game.bot_runner(@engine).run
   end
 
   def save_game
@@ -62,6 +65,14 @@ class Games::MakeMove < ApplicationService
     illegal!('wait_for_turn')
   end
 
+  # only the human can answer an offer, and only one made to them
+  def check_offer
+    return if !Games::OFFER_ANSWERS.include?(move_type)
+    return if @engine.offer&.fetch('partner_index') == human_index
+
+    illegal!('no_offer')
+  end
+
   def plant_pending
     @engine.plant_pending(
       player_index: human_index,
@@ -73,7 +84,7 @@ class Games::MakeMove < ApplicationService
   # bots decide straight away, so a trade either happens or is turned down
   def trade
     partner = trade_partner
-    partner_hand_indexes = indexes_for_beans(partner)
+    partner_hand_indexes = partner_hand_indexes_for(partner)
     check_bot_accepts(partner, partner_hand_indexes)
 
     @engine.trade(
@@ -94,7 +105,7 @@ class Games::MakeMove < ApplicationService
   def check_bot_accepts(partner, partner_hand_indexes)
     offered = picked_cards(@engine.face_up, :face_up_indexes) + picked_cards(@engine.active_player.hand, :hand_indexes)
     requested = partner_hand_indexes.map { |index| partner.hand.cards[index] }
-    bot = BeanBazaar::BotRunner.new(@engine, human_index: human_index).bot(@engine.players.index(partner))
+    bot = @game.bot_runner(@engine).bot(@engine.players.index(partner))
     return if bot.accepts?(offered: offered, requested: requested)
 
     illegal!('turned_down', name: partner.name)
@@ -111,15 +122,9 @@ class Games::MakeMove < ApplicationService
 
   # The human can't see a bot's hand, so they ask for bean types, as at a real table.
   # @return [Array<Integer>] hand positions of the asked-for beans
-  def indexes_for_beans(partner)
-    Array(@move_params[:partner_beans]).each_with_object([]) do |bean, indexes|
-      index = partner.hand.cards.each_index.find do |candidate|
-        partner.hand.cards[candidate].to_s == bean.to_s && !indexes.include?(candidate)
-      end
-      illegal!('no_bean_to_give', name: partner.name, bean: bean) if index.nil?
-
-      indexes << index
-    end
+  def partner_hand_indexes_for(partner)
+    beans = Array(@move_params[:partner_beans])
+    partner.hand.indexes_of(beans) || illegal!('no_bean_to_give', name: partner.name)
   end
 
   def move_type

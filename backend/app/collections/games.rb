@@ -9,7 +9,17 @@ class Games
   # Bot seat names, in seating order.
   BOT_NAMES = %w[Pinto Lima Fava Mung].freeze
 
+  # Bot difficulty, mapped to the bot class that plays it.
+  BOT_LEVELS = {
+    'easy' => 'BeanBazaar::Bots::SimpleBot',
+    'smart' => 'BeanBazaar::Bots::SmartBot',
+  }.freeze
+  DEFAULT_BOT_LEVEL = 'smart'.freeze
+
   # Moves only the active player can make; harvesting, buying a field and
   # planting pending cards are allowed on any turn.
   ACTIVE_PLAYER_MOVES = %w[plant_from_hand flip_cards trade end_trading].freeze
+
+  # Answers to an offer a bot made to the human, allowed on the bot's turn.
+  OFFER_ANSWERS = %w[accept_offer decline_offer].freeze
 end

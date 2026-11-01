@@ -29,8 +29,20 @@ RSpec.describe Games::Create do
     expect(described_class.new('lots').call[:extra_params][:alert]).to eq('Choose 2 to 4 bots')
   end
 
+  it 'plays easy or smart bots' do
+    expect(described_class.new(2, 'easy').call[:payload].bot_level).to eq('easy')
+    expect(described_class.new(2).call[:payload].bot_level).to eq('smart')
+  end
+
+  it 'rejects an unknown bot level' do
+    result = described_class.new(2, 'genius').call
+
+    expect(result).to include(success: false)
+    expect(result[:extra_params][:alert]).to eq('Choose easy or smart bots')
+  end
+
   it 'rolls back and reports a save failure' do
-    allow(Game).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(Game.new))
+    allow_any_instance_of(Game).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(Game.new)) # rubocop:disable RSpec/AnyInstance
     result = described_class.new(2).call
 
     expect(result[:success]).to be(false)

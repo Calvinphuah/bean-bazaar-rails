@@ -15,7 +15,8 @@ RSpec.describe Games::MakeMove do
   let(:lima) { player('Lima', %i[wax], fields: [field(:wax, 2), field(:soy, 2)]) }
   let(:deck) { BeanBazaar::Deck.new(draw_pile: %i[red soy] + Array.new(40, :chili)) }
   let(:engine) { BeanBazaar::Game.new(players: [you, pinto, lima], deck: deck) }
-  let(:game) { Game.create!(state: engine.to_h) }
+  # Easy bots never make offers, so each turn plays straight through.
+  let(:game) { Game.create!(state: engine.to_h, bot_level: 'easy') }
 
   def move(type, **fields)
     described_class.new(game, { type: type, **fields }).call
@@ -83,7 +84,7 @@ RSpec.describe Games::MakeMove do
     it "rejects asking for a bean the bot doesn't hold" do
       expect_alert(
         move('trade', partner_index: 1, face_up_indexes: [0], partner_beans: %w[green green]),
-        'Pinto has no green bean to give',
+        "Pinto doesn't have those beans to give",
       )
     end
 
@@ -98,6 +99,45 @@ RSpec.describe Games::MakeMove do
       expect(saved.active_index).to eq(0)
       expect(saved.phase).to eq(:plant)
     end
+  end
+
+  describe "answering a smart bot's offer" do
+    # Pinto grows soy and blue, so it offers its useless face-up red for the blue it needs.
+    let(:pinto) { player('Pinto', [], fields: [field(:soy, 2), field(:blue, 3)]) }
+    let(:you) { player('You', %i[blue chili]) }
+    let(:offered_engine) do
+      BeanBazaar::Game.new(players: [you, pinto, lima], deck: deck, active_index: 1, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]))
+    end
+    let(:game) { Game.create!(state: offered_engine.to_h, bot_level: 'smart') }
+
+    before do
+      game.bot_runner(offered_engine).run
+      game.store(offered_engine)
+    end
+
+    it 'shows the waiting offer' do
+      expect(saved.offer).to include('partner_index' => 0, 'partner_beans' => %w[blue])
+    end
+
+    it 'accepts the offer and lets the bots carry on' do
+      result = move('accept_offer')
+
+      expect(result).to include(success: true)
+      expect(saved.offer).to be_nil
+      expect(saved.players[0].pending).to eq(%i[red])
+      expect(saved.players[0].hand.cards).to eq(%i[chili])
+    end
+
+    it 'declines the offer and keeps your cards' do
+      move('decline_offer')
+
+      expect(saved.log.pluck('text')).to include("You turned down Pinto's offer")
+      expect(saved.players[0].hand.cards.first(2)).to eq(%i[blue chili])
+    end
+  end
+
+  it 'rejects answering when no offer waits' do
+    expect_alert(move('accept_offer'), 'There is no offer waiting for you')
   end
 
   it 'harvests and buys a third field for the human at any time' do

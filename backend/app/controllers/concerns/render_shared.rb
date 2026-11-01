@@ -25,8 +25,11 @@ module RenderShared
     render json: { root_name => { error_message: extra_params[:alert] } }, status: status
   end
 
+  # A plain Hash payload (e.g. a trade quote) is already in its response shape.
   # @return [Hash]
   def serialize(payload)
+    return payload if payload.is_a?(Hash)
+
     serializer_for(payload).new(payload).as_json
   end
 

@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   namespace :api do
     resources :games, only: %i[create show] do
       resources :moves, only: :create
+      resources :trade_quotes, only: :create
     end
   end
 end

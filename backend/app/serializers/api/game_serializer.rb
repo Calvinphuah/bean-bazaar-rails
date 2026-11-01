@@ -18,6 +18,8 @@ class Api::GameSerializer
       deck: { draw: @engine.deck.draw_pile.size, discard: @engine.deck.discard_pile.size, run_outs: @engine.deck.run_outs },
       face_up: @engine.face_up.cards,
       players: @engine.players.each_with_index.map { |player, index| player_json(player, index) },
+      offer: offer_json,
+      bot_level: @game.bot_level,
       log: @engine.log,
       bean_types: BeanBazaar::BeanType.all.map(&:to_h),
     }
@@ -34,6 +36,16 @@ class Api::GameSerializer
       coins: player.coins,
       pending: player.pending,
     }
+  end
+
+  # A bot's offer waiting for the human, with the cards spelled out.
+  def offer_json
+    offer = @engine.offer
+    return nil if offer.nil? || offer['partner_index'] != @game.human_index
+
+    gives = offer['face_up_indexes'].map { |index| @engine.face_up.cards[index] } +
+            offer['hand_indexes'].map { |index| @engine.active_player.hand.cards[index] }
+    { from: @engine.active_index, give: gives, ask: offer['partner_beans'] }
   end
 
   def winner_indexes
