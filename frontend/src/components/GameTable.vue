@@ -80,9 +80,11 @@ const isTrading = computed(() => live.value && myTurn.value && props.game.phase 
 // On a bot's turn, after turning its offer down to make your own.
 const isBidding = computed(() => live.value && props.game.bidding)
 const isDealing = computed(() => isTrading.value || isBidding.value)
+// Not tied to `live`: the traded-beans panel stays up while each plant saves and
+// replays, instead of blinking out; only the plant buttons wait for `live`.
 const pendingIndex = computed(() => {
   const pending = me.value?.pending ?? []
-  if (!live.value || props.game.phase !== "plant_pending" || pending.length === 0) return null
+  if (props.game.over || props.game.phase !== "plant_pending" || pending.length === 0) return null
   return pickedPending.value !== null && pickedPending.value < pending.length ? pickedPending.value : 0
 })
 const pendingCard = computed(() => (pendingIndex.value === null ? null : me.value?.pending[pendingIndex.value] ?? null))
@@ -133,12 +135,12 @@ function beanName(bean: BeanKey): string {
 
 // One clear instruction for what to do right now.
 const instruction = computed(() => {
+  // The traded-beans panel gives its own instructions, even mid-replay.
+  if (pendingCard.value) return ""
   if (props.replaying) return `${nameOf(props.replaying.player) || "The table"} is playing...`
   if (props.game.over) return ""
   if (offer.value) return `${nameOf(offer.value.from)} is offering you a deal.`
   if (isBidding.value) return `Make ${nameOf(props.game.active_index)} an offer for its cards, then press Done.`
-  // The traded-beans panel gives its own instructions.
-  if (pendingCard.value) return ""
   if (!myTurn.value) return `${nameOf(props.game.active_index)} is playing...`
   if (props.game.phase === "plant" && props.game.hand_plants === 0) {
     const card = frontCard.value
@@ -161,7 +163,7 @@ function bubbleFor(index: number): string | null {
 
 function plantLabel(field: FieldState): string | null {
   if (canPlantFromHand.value && frontCard.value && accepts(field, frontCard.value)) return `Plant ${beanName(frontCard.value)}`
-  if (pendingCard.value && accepts(field, pendingCard.value)) return `Plant ${beanName(pendingCard.value)}`
+  if (live.value && pendingCard.value && accepts(field, pendingCard.value)) return `Plant ${beanName(pendingCard.value)}`
   return null
 }
 
