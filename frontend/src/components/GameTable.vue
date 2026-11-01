@@ -95,7 +95,7 @@ const pendingHint = computed(() => {
   const card = pendingCard.value
   if (!card) return ""
   if (!myFields.value.some((field) => accepts(field, card))) return `No field can take your ${beanName(card)}: harvest a field first.`
-  return `Drag your ${beanName(card)} onto a field, or press Plant ${beanName(card)}.`
+  return `Drag your ${beanName(card)} onto a field, or press Plant here.`
 })
 const canBuyField = computed(() =>
   live.value && !!me.value && me.value.fields.length < MAX_FIELDS && me.value.coins >= THIRD_FIELD_PRICE,
@@ -137,7 +137,7 @@ const instruction = computed(() => {
     const card = frontCard.value
     if (!card) return "Your hand is empty, so flip 2 cards."
     if (!myFields.value.some((field) => accepts(field, card))) return `No field can take your ${beanName(card)}: harvest a field first.`
-    return `Drag your ${beanName(card)} onto a field, or press Plant.`
+    return `Drag your ${beanName(card)} onto a field, or press Plant here.`
   }
   if (props.game.phase === "plant") return "Plant your next card too, or flip 2 cards to start trading."
   return "Make an offer, or press Done trading."
@@ -186,7 +186,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
           class="tool"
           @click="emit('tutorial')"
         >
-          How to play
+          Rules
         </button>
         <button
           class="tool"
@@ -242,33 +242,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
       </div>
 
       <div class="row my-spot">
-        <div
-          class="farm"
-          data-tour="fields"
-        >
-          <BeanField
-            v-for="(field, index) in myFields"
-            :key="index"
-            :field="field"
-            :bean-type="field.bean ? beanTypes[field.bean] ?? null : null"
-            :plant-label="live ? plantLabel(field) : null"
-            :can-harvest="live && canHarvest(myFields, index)"
-            @plant="plantInto(index)"
-            @harvest="move({ type: 'harvest', field_index: index })"
-          />
-          <button
-            v-if="canBuyField"
-            class="buy-field"
-            @click="move({ type: 'buy_third_field' })"
-          >
-            + Buy a 3rd field<br><small>{{ THIRD_FIELD_PRICE }} coins</small>
-          </button>
-        </div>
-
-        <div
-          class="action"
-          data-tour="action"
-        >
+        <div class="farm-side">
           <div class="plate-row">
             <!-- Your plate matches the bots': who you are and what you've earned. -->
             <div
@@ -307,6 +281,34 @@ const youWon = computed(() => props.game.winners.includes(you.value))
               </template>
             </div>
           </div>
+          <div
+            class="farm"
+            data-tour="fields"
+          >
+            <BeanField
+              v-for="(field, index) in myFields"
+              :key="index"
+              :field="field"
+              :bean-type="field.bean ? beanTypes[field.bean] ?? null : null"
+              :plant-label="live ? plantLabel(field) : null"
+              :can-harvest="live && canHarvest(myFields, index)"
+              @plant="plantInto(index)"
+              @harvest="move({ type: 'harvest', field_index: index })"
+            />
+            <button
+              v-if="canBuyField"
+              class="buy-field"
+              @click="move({ type: 'buy_third_field' })"
+            >
+              + Buy a 3rd field<br><small>{{ THIRD_FIELD_PRICE }} coins</small>
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="action"
+          data-tour="action"
+        >
           <TradeBar
             v-if="isTrading"
             :gives="trade.gives.value"
@@ -358,7 +360,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
               <span class="left">{{ me.pending.length }} left</span>
             </div>
             <p class="pending-rule">
-              Traded beans can't be traded again. Plant every one now.
+              These can't be traded again.
             </p>
             <div class="pending-body">
               <div class="pending-cards">
@@ -534,29 +536,34 @@ const youWon = computed(() => props.game.winners.includes(you.value))
    your farm and hand along the bottom, with the hand running off the edge. */
 /* Pinned to the window: a game table never scrolls. */
 .game { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(520px, 1fr) auto; overflow: clip; }
+/* A small window gets the whole table a step smaller, not a squashed layout. */
+@media (max-height: 820px), (max-width: 1180px) { .game { zoom: .86; } }
+@media (max-height: 700px), (max-width: 1020px) { .game { zoom: .76; } }
 
-.topbar { position: relative; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 20px; }
-.tools { display: flex; gap: 2px; }
+.topbar { position: relative; z-index: 15; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 10px 20px; }
+.tools { justify-self: end; display: flex; gap: 2px; white-space: nowrap; }
 /* Menu items, not game actions: plain text so the phase tracker leads the bar. */
 .tool { background: none; border: 0; box-shadow: none; padding: 6px 10px; border-radius: 8px; color: #fff6dc; font-size: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, .45); }
 .tool:hover { background: rgba(30, 14, 4, .25); }
 .tool[aria-pressed="true"] { background: rgba(30, 14, 4, .35); }
 .tool:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 
-.felt { position: relative; }
+/* Three bands: room for the bots along the top, the market, then your farm. */
+.felt { position: relative; display: grid; grid-template-rows: 132px minmax(0, 1fr) auto; justify-items: center; align-items: center; }
 .felt :deep(.seat) { position: absolute; z-index: 2; }
 /* Seats sit on an arc around the market: sides low on the edges, the rest along the top. */
-.felt :deep(.spot-left) { left: 2.5%; top: 30%; }
-.felt :deep(.spot-right) { right: 2.5%; top: 30%; }
+.felt :deep(.spot-left) { left: 2.5%; top: 150px; }
+.felt :deep(.spot-right) { right: 2.5%; top: 150px; }
 .felt :deep(.spot-top) { left: 50%; top: 0; transform: translateX(-50%); }
 .felt :deep(.spot-top-left) { left: 24%; top: 0; transform: translateX(-50%); }
 .felt :deep(.spot-top-right) { right: 24%; top: 0; transform: translateX(50%); }
-.middle { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 1; }
+.middle { grid-row: 2; z-index: 1; }
 .offer-spot { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: rgba(20, 10, 4, .45); }
 
 .me { position: relative; z-index: 3; display: grid; gap: 6px; padding: 0 24px; }
 .row { display: flex; gap: 28px; align-items: flex-end; justify-content: center; }
-.my-spot { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 2; }
+.my-spot { grid-row: 3; z-index: 2; padding-bottom: 8px; }
+.farm-side { display: grid; gap: 10px; justify-items: start; }
 .farm { display: flex; gap: 10px; align-items: flex-end; }
 .buy-field {
   width: 110px;
@@ -568,7 +575,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
   box-shadow: none;
   font-size: 14px;
 }
-.action { width: 320px; display: grid; gap: 10px; align-content: end; justify-items: start; }
+.action { min-width: 320px; display: grid; gap: 10px; align-content: end; justify-items: start; }
 .plate-row { display: flex; gap: 8px; align-items: center; }
 .my-plate {
   display: flex;

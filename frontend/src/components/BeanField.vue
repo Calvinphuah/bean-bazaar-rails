@@ -58,7 +58,7 @@ function onDrop(): void {
 
     <div class="info">
       <template v-if="beanType">
-        <strong>{{ coinText(coins) }}</strong>
+        <strong v-if="coins">{{ coinText(coins) }}</strong>
         <span v-if="next">{{ next.beans - field.count }} more for {{ coinText(next.coins) }}</span>
         <span v-else>Fully grown, harvest it</span>
       </template>

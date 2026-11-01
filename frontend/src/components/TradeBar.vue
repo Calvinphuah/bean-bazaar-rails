@@ -38,7 +38,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
     data-tour="trade"
   >
     <div class="section">
-      <h3>You give <span class="hint">(click to take back)</span></h3>
+      <h3>You give</h3>
       <div class="chips">
         <button
           v-for="group in giveGroups"
@@ -63,19 +63,19 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
         <span
           v-if="!gives.length"
           class="hint"
-        >Click face-up cards or cards in your hand</span>
+        >Pick cards from the table or your hand</span>
       </div>
     </div>
 
     <div class="section">
-      <h3>You get <span class="hint">(click to ask, right-click to remove)</span></h3>
+      <h3>You get</h3>
       <div class="asks">
         <button
           v-for="bean in beans"
           :key="bean.key"
           class="ask card-button"
           :class="{ chosen: (asks[bean.key] ?? 0) > 0 }"
-          :title="`${bean.name} Bean`"
+          :title="`${bean.name} Bean: right-click to ask for one less`"
           :aria-label="`Ask for a ${bean.name} bean${asks[bean.key] ? `, ${asks[bean.key]} asked` : ''}`"
           @click="emit('ask', bean.key, 1)"
           @contextmenu.prevent="emit('ask', bean.key, -1)"
@@ -128,7 +128,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
 h3 { font-size: 14px; }
 .hint { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
 /* Same 8 columns and card size as the asks below, so both rows line up. */
-.chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; min-height: 52px; padding-top: 4px; align-items: center; justify-items: center; }
+.chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; min-height: 50px; padding-top: 4px; align-items: center; justify-items: center; }
 .chips > .hint { grid-column: 1 / -1; justify-self: start; }
 .chip-button { position: relative; padding: 3px; transition: transform .15s ease; }
 .chip-button:hover { transform: translateY(-2px); }
@@ -138,7 +138,7 @@ h3 { font-size: 14px; }
 .ask:hover { background: var(--panel-dark); }
 .ask.chosen { background: #cfe9c5; }
 .ask img { width: 32px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 4px; border: 2px solid var(--ink); }
-.ask-name { font-size: 10px; font-weight: 800; }
+.ask-name { font-size: 9px; font-weight: 800; white-space: nowrap; }
 .ask-count {
   position: absolute;
   top: -4px;

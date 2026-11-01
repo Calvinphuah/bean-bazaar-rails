@@ -155,7 +155,8 @@ module BeanBazaar
       waiting = require_offer
       partner = player_at(waiting['partner_index'])
       partner_hand_indexes = partner.hand.indexes_of(waiting['partner_beans'])
-      raise IllegalMove, "#{partner.name} has no #{bean_names(waiting['partner_beans'])} to give" if partner_hand_indexes.nil?
+      # Only the player answering sees this, so it speaks to them.
+      raise IllegalMove, "You have no #{bean_names(waiting['partner_beans'])} to give" if partner_hand_indexes.nil?
 
       @offer = nil
       execute_trade(partner, waiting['face_up_indexes'], waiting['hand_indexes'], partner_hand_indexes)

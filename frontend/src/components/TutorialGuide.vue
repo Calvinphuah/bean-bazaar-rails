@@ -8,7 +8,7 @@ const STEPS = [
   {
     target: "hand",
     title: "Your hand",
-    body: "You must plant the front card (marked Plant next) every turn. Drag it onto a field or press Plant. You can never reorder your hand, so plan ahead.",
+    body: "You must plant the front card (marked Plant next) every turn. Drag it onto a field or press Plant here. You can never reorder your hand, so plan ahead.",
   },
   {
     target: "fields",

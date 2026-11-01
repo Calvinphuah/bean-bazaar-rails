@@ -334,7 +334,7 @@ RSpec.describe BeanBazaar::Game do
     it 'fails to accept when the partner lacks the asked-for bean' do
       game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[soy])
 
-      expect { game.accept_offer }.to raise_error(BeanBazaar::IllegalMove, 'Bot has no Soy to give')
+      expect { game.accept_offer }.to raise_error(BeanBazaar::IllegalMove, 'You have no Soy to give')
       expect(game.offer).not_to be_nil
     end
 

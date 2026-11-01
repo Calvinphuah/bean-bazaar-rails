@@ -135,7 +135,9 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   gap: 8px;
 }
 .player, .table-side { display: grid; justify-items: center; gap: 6px; }
-.seat.side-top { grid-template-rows: auto auto; width: 230px; }
+/* A top seat puts its plate and card backs side by side, so it stays short. */
+.seat.side-top { grid-template-rows: auto auto; }
+.seat.side-top .player { grid-auto-flow: column; align-items: center; gap: 22px; }
 .seat.side-left { grid-template-columns: auto auto; }
 .seat.side-right { grid-template-columns: auto auto; }
 .seat.side-right .player { order: 2; }
@@ -221,6 +223,9 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   border: 2px solid var(--ink);
   box-shadow: 0 6px 14px rgba(0, 0, 0, .45);
 }
+/* A top seat touches the header, so its bubble sits beside the plate instead. */
+.side-top .bubble { bottom: auto; top: 6px; left: calc(100% + 12px); transform: none; }
+.side-top .bubble::after { left: auto; right: 100%; top: 50%; transform: translateY(-50%); border-top-color: transparent; border-right-color: var(--ink); }
 .bubble::after {
   content: "";
   position: absolute;
@@ -250,7 +255,7 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   background: var(--panel);
   color: var(--ink);
 }
-.side-top .answer { top: 12px; left: calc(50% + 72px); transform: none; }
+.side-top .answer { top: auto; bottom: -34px; }
 .side-left .answer, .side-right .answer { top: auto; bottom: -34px; }
 .side-left .answer { left: 0; transform: none; }
 .side-right .answer { left: auto; right: 0; transform: none; }
@@ -261,4 +266,5 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
 
 .pop-enter-active, .pop-leave-active { transition: all .2s ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.92); }
+.side-top .pop-enter-from, .side-top .pop-leave-to { transform: translateY(6px) scale(.92); }
 </style>

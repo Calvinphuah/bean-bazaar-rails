@@ -61,7 +61,10 @@ const deckStyle = computed(() => {
             src="/cards/coin_back.webp"
             alt=""
           >
-          <span class="count">{{ table.deck.draw }}</span>
+          <span
+            v-if="table.deck.draw"
+            class="count"
+          >{{ table.deck.draw }}</span>
         </div>
         <span class="label">Deck</span>
       </div>
@@ -85,7 +88,10 @@ const deckStyle = computed(() => {
               />
             </div>
           </template>
-          <span class="count">{{ table.deck.discard }}</span>
+          <span
+            v-if="table.deck.discard"
+            class="count"
+          >{{ table.deck.discard }}</span>
         </div>
         <span class="label">Discard</span>
       </div>

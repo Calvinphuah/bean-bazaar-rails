@@ -49,7 +49,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
 
   const status = computed(() => {
     if (askCapped.value) return `No bot holds more than ${maxAsk.value} cards, so that's the most you can ask for.`
-    if (!hasOffer.value) return "Click cards to give and beans you want. Bots answer straight away."
+    if (!hasOffer.value) return "Bots answer as soon as you pick."
     if (quoting.value) return "Asking the table..."
     const all = Object.values(answers.value)
     if (all.length && all.every((answer) => answer === "missing")) return "Nobody has those beans right now."
