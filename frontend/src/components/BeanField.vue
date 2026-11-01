@@ -14,6 +14,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{ plant: []; harvest: [] }>()
 
+// A few cards stand for the whole pile; the badge gives the exact count.
+const MAX_LAYERS = 3
+const LAYER_STEP = 5
+
+// Each card further back sits a little higher and at its own slight angle, like a hand-stacked pile.
+function layerStyle(layer: number): Record<string, string> {
+  const angle = layer % 2 === 0 ? 2 : -2.5
+  return { transform: `translateY(${-layer * LAYER_STEP}px) rotate(${angle}deg)`, zIndex: String(-layer) }
+}
+
 const dragOver = ref(false)
 const coins = computed(() => coinsFor(props.beanType ?? undefined, props.field.count))
 const next = computed(() => nextStep(props.beanType ?? undefined, props.field.count))
@@ -36,13 +46,19 @@ function onDrop(): void {
       v-if="beanType"
       class="pile"
     >
-      <!-- Card edges peeking out behind the top card show how full the field is. -->
-      <span
-        v-for="layer in Math.min(field.count - 1, 4)"
+      <!-- The same card piled behind, name banners peeking out above, shows how full the field is. -->
+      <div
+        v-for="layer in Math.min(field.count - 1, MAX_LAYERS)"
         :key="layer"
         class="layer"
-        :style="{ transform: `translate(${layer * 3}px, ${layer * -3}px)`, zIndex: -layer }"
-      />
+        :style="layerStyle(layer)"
+        aria-hidden="true"
+      >
+        <BeanCard
+          :bean="beanType"
+          size="small"
+        />
+      </div>
       <BeanCard
         :bean="beanType"
         size="small"
@@ -104,14 +120,10 @@ function onDrop(): void {
 .field.empty { border-color: rgba(255, 246, 220, .4); }
 .field.droppable { border-color: var(--gold); border-style: solid; box-shadow: 0 0 18px rgba(246, 201, 56, .5); }
 .field.over { background: rgba(246, 201, 56, .2); transform: scale(1.04); }
-.pile { position: relative; isolation: isolate; }
-.layer {
-  position: absolute;
-  inset: 0;
-  background: #fff;
-  border: 1px solid rgba(43, 29, 20, .35);
-  border-radius: 9px;
-}
+/* Room above each top card (and empty patch) for the banners behind it, so fields line up. */
+.pile { position: relative; isolation: isolate; margin-top: 12px; }
+/* Dimmed a touch, so the top card still reads first. */
+.layer { position: absolute; inset: 0; filter: brightness(.88); }
 .badge {
   position: absolute;
   top: -9px;
@@ -129,6 +141,7 @@ function onDrop(): void {
 .placeholder {
   width: 92px;
   aspect-ratio: 63 / 88;
+  margin-top: 12px;
   display: grid;
   place-items: center;
   text-align: center;
@@ -137,5 +150,5 @@ function onDrop(): void {
 }
 .info { display: grid; justify-items: center; text-align: center; font-size: 11px; min-height: 30px; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
 .info strong { font-size: 13px; color: #ffe27a; }
-.actions { display: flex; flex-direction: column; gap: 5px; }
+.actions { margin-top: auto; display: flex; flex-direction: column; gap: 5px; }
 </style>

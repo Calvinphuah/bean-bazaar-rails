@@ -572,8 +572,8 @@ const youWon = computed(() => props.game.winners.includes(you.value))
 .me { position: relative; z-index: 3; display: grid; gap: 6px; padding: 0 24px; }
 .row { display: flex; gap: 28px; align-items: flex-end; justify-content: center; }
 .my-spot { grid-row: 3; z-index: 2; padding-bottom: 8px; }
-.farm-side { display: grid; gap: 10px; justify-items: start; }
-.farm { display: flex; gap: 10px; align-items: flex-end; }
+.farm-side { display: grid; gap: 10px; justify-items: center; }
+.farm { display: flex; gap: 10px; align-items: stretch; }
 .buy-field {
   width: 110px;
   min-height: 190px;
@@ -584,7 +584,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
   box-shadow: none;
   font-size: 14px;
 }
-.action { min-width: 320px; display: grid; gap: 10px; align-content: end; justify-items: start; }
+.action { min-width: 320px; display: grid; gap: 10px; align-content: center; justify-items: start; }
 .plate-row { display: flex; gap: 8px; align-items: center; }
 .my-plate {
   display: flex;

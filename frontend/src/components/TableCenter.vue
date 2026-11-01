@@ -146,10 +146,10 @@ const deckStyle = computed(() => {
 .center { display: flex; align-items: center; gap: 28px; }
 .piles { display: grid; grid-template-columns: auto auto; gap: 12px 22px; align-items: end; justify-items: center; }
 .pile { display: grid; justify-items: center; gap: 22px; }
-.label { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.label { font-size: 13px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
 .pile-cards { position: relative; width: 92px; aspect-ratio: 63 / 88; }
 /* An empty pile leaves a faint patch where the cards were. */
-.pile-cards.empty { border-radius: 9px; background: rgba(30, 14, 4, .18); box-shadow: inset 0 0 0 1px rgba(255, 246, 220, .12); }
+.pile-cards.empty { border-radius: 9px; background: rgba(30, 14, 4, .1); }
 .back { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; border: 2px solid #fff; }
 .tossed { position: absolute; inset: 0; }
 .count {
@@ -172,7 +172,8 @@ const deckStyle = computed(() => {
 .pip { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff6dc; }
 .pip.used { background: var(--accent); }
 
-.face-up { display: flex; gap: 14px; min-height: 160px; align-items: center; }
+/* Room for two cards even before the flip, so the deck doesn't jump sideways. */
+.face-up { display: flex; gap: 14px; min-height: 160px; min-width: 238px; justify-content: center; align-items: center; }
 
 .flip-enter-active { transition: transform .45s ease, opacity .45s ease; }
 .flip-enter-from { opacity: 0; transform: rotateY(90deg) translateX(-60px) scale(.8); }
