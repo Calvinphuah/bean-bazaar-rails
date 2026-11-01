@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed } from "vue"
 import BeanCard from "./BeanCard.vue"
 import { MAX_RUN_OUTS } from "../rules"
 import type { BeanType, TableSnapshot } from "../types"
 
-defineProps<{
+// One edge line per this many cards, so a full deck looks thick and a low one thin.
+const CARDS_PER_EDGE = 12
+const MAX_EDGES = 7
+// Tossed cards under the top of the discard pile, each at its own angle.
+const DISCARD_TILTS = [-9, 6, -3]
+
+const props = defineProps<{
   table: TableSnapshot
   beanTypes: Record<string, BeanType>
   // Face-up cards picked for the trade you are building.
@@ -12,6 +19,18 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ pick: [index: number] }>()
+
+const deckEdges = computed(() => Math.min(MAX_EDGES, Math.ceil(props.table.deck.draw / CARDS_PER_EDGE)))
+const discardTilts = computed(() => DISCARD_TILTS.slice(0, Math.min(props.table.deck.discard, DISCARD_TILTS.length)))
+
+// Card edges peeking out under the top card, like the side of a real deck.
+const deckStyle = computed(() => {
+  const edges = Array.from({ length: deckEdges.value }, (_, index) => {
+    const depth = (index + 1) * 2
+    return `0 ${depth}px 0 -1px #f4ecd8, 0 ${depth + 1}px 0 -1px rgba(43, 29, 20, .35)`
+  })
+  return { boxShadow: [...edges, `0 ${deckEdges.value * 2 + 8}px 16px rgba(0, 0, 0, .35)`].join(", ") }
+})
 </script>
 
 <template>
@@ -21,24 +40,37 @@ const emit = defineEmits<{ pick: [index: number] }>()
         class="pile"
         data-tour="deck"
       >
-        <div class="stack deck">
+        <div
+          class="stack"
+          :class="{ empty: !table.deck.draw }"
+        >
           <img
             v-if="table.deck.draw"
+            class="card deck-top"
+            :style="deckStyle"
             src="/cards/coin_back.webp"
             alt=""
           >
+          <span class="count">{{ table.deck.draw }}</span>
         </div>
-        <span>Deck <strong>{{ table.deck.draw }}</strong></span>
+        <span class="label">Deck</span>
       </div>
       <div class="pile">
-        <div class="stack discard">
+        <div
+          class="stack"
+          :class="{ empty: !table.deck.discard }"
+        >
           <img
-            v-if="table.deck.discard"
+            v-for="(tilt, index) in discardTilts"
+            :key="index"
+            class="card tossed"
+            :style="{ transform: `rotate(${tilt}deg)` }"
             src="/cards/coin_back.webp"
             alt=""
           >
+          <span class="count">{{ table.deck.discard }}</span>
         </div>
-        <span>Discard <strong>{{ table.deck.discard }}</strong></span>
+        <span class="label">Discard</span>
       </div>
       <div
         class="reshuffles"
@@ -89,18 +121,30 @@ const emit = defineEmits<{ pick: [index: number] }>()
 
 <style scoped>
 .center { display: flex; align-items: center; gap: 28px; }
-.piles { display: grid; grid-template-columns: auto auto; gap: 10px 16px; align-items: end; justify-items: center; }
-.pile { display: grid; justify-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
-.stack {
-  width: 86px;
-  aspect-ratio: 63 / 88;
-  border-radius: 9px;
-  border: 2px dashed rgba(255, 246, 220, .4);
+.piles { display: grid; grid-template-columns: auto auto; gap: 12px 22px; align-items: end; justify-items: center; }
+.pile { display: grid; justify-items: center; gap: 22px; }
+.label { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.stack { position: relative; width: 86px; aspect-ratio: 63 / 88; }
+/* An empty pile leaves a faint outline where the cards were. */
+.stack.empty { border-radius: 9px; border: 2px dashed rgba(255, 246, 220, .35); }
+.card { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; border: 2px solid #fff; }
+.tossed { box-shadow: 0 6px 12px rgba(0, 0, 0, .3); }
+.count {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  z-index: 2;
+  min-width: 28px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 2px 0 var(--ink);
 }
-.stack img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; display: block; border: 2px solid #fff; }
-.stack.deck img { box-shadow: 3px -3px 0 -1px #fff, 6px -6px 0 -2px #f2ead8, 9px -9px 0 -3px #fff, 0 10px 18px rgba(0, 0, 0, .4); }
-/* The discard pile looks tossed, not stacked. */
-.stack.discard img { transform: rotate(-8deg); box-shadow: 6px 4px 0 -1px #fff, -5px 6px 0 -1px #f2ead8, 0 10px 18px rgba(0, 0, 0, .35); }
 .reshuffles { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
 .pip { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff6dc; }
 .pip.used { background: var(--accent); }
