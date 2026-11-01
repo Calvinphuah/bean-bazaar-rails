@@ -33,6 +33,7 @@ module BeanBazaar
     def waiting_for_human?
       return false if @human_index.nil?
       return true if @game.offer&.fetch('partner_index') == @human_index
+      return true if @game.bidding == @human_index
       return @game.players[@human_index].pending.any? if @game.phase == :plant_pending
 
       @game.active_index == @human_index

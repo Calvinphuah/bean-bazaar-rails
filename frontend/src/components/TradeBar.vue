@@ -9,6 +9,8 @@ const props = defineProps<{
   beanTypes: Record<string, BeanType>
   status: string
   busy: boolean
+  // The bot you are bidding to on its turn: its face-up cards are then yours to get.
+  bidWith: string | null
 }>()
 
 // point: the bean under the pointer, so the table can show it big; null when it leaves.
@@ -24,11 +26,14 @@ const beans = computed(() => Object.values(props.beanTypes))
 
 // One chip per bean with a count, so giving 10 or 20 cards still fits one row.
 // A click takes back the card of that bean picked last.
-const giveGroups = computed(() => {
+function grouped(cards: TradeGive[]) {
   const groups = new Map<BeanKey, TradeGive[]>()
-  for (const give of props.gives) groups.set(give.bean, [...(groups.get(give.bean) ?? []), give])
-  return [...groups].map(([bean, cards]) => ({ bean, cards, last: cards[cards.length - 1]! }))
-})
+  for (const card of cards) groups.set(card.bean, [...(groups.get(card.bean) ?? []), card])
+  return [...groups].map(([bean, picks]) => ({ bean, cards: picks, last: picks[picks.length - 1]! }))
+}
+// While bidding, picked face-up cards are the bot's, so they go under You get.
+const giveGroups = computed(() => grouped(props.bidWith ? props.gives.filter((give) => give.source === "hand") : props.gives))
+const takeGroups = computed(() => grouped(props.bidWith ? props.gives.filter((give) => give.source === "face_up") : []))
 const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks).length > 0)
 </script>
 
@@ -63,12 +68,34 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
         <span
           v-if="!gives.length"
           class="hint"
-        >Pick cards from the table or your hand</span>
+        >{{ bidWith ? "Pick cards from your hand" : "Pick cards from the table or your hand" }}</span>
       </div>
     </div>
 
     <div class="section">
-      <h3>You get</h3>
+      <h3>{{ bidWith ? `You get from ${bidWith}` : "You get" }}</h3>
+      <div
+        v-if="takeGroups.length"
+        class="chips"
+      >
+        <button
+          v-for="group in takeGroups"
+          :key="group.bean"
+          class="chip-button card-button"
+          :title="`Put back ${bidWith}'s ${beanTypes[group.bean]?.name} Bean`"
+          @click="emit('remove', group.last)"
+        >
+          <img
+            class="chip"
+            :src="`/cards/${group.bean}-240.webp`"
+            alt=""
+          >
+          <span
+            v-if="group.cards.length > 1"
+            class="ask-count"
+          >{{ group.cards.length }}</span>
+        </button>
+      </div>
       <div class="asks">
         <button
           v-for="bean in beans"
@@ -115,7 +142,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           :disabled="busy"
           @click="emit('done')"
         >
-          Done trading
+          {{ bidWith ? "Done" : "Done trading" }}
         </button>
       </div>
     </div>

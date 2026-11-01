@@ -12,7 +12,9 @@ function listNames(names: string[]): string {
 
 // The offer you are building on your trade turn, with each bot's live answer,
 // in the style of Colonist: pick what you give and get, bots answer on their seats.
-export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, move: (next: Move) => Promise<boolean>) {
+// isTrading covers bidding too: then the active bot is the only partner, and a
+// deal is a bid of your hand cards for its face-up cards and beans.
+export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, isBidding: Ref<boolean>, move: (next: Move) => Promise<boolean>) {
   const pickedFaceUp = ref<number[]>([])
   const pickedHand = ref<number[]>([])
   const asks = ref<Record<BeanKey, number>>({})
@@ -143,13 +145,8 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
   watch(() => [game.value?.face_up.length, hand.value.length, isTrading.value], clear)
 
   async function tradeWith(partner: number): Promise<void> {
-    const traded = await move({
-      type: "trade",
-      partner_index: partner,
-      face_up_indexes: pickedFaceUp.value,
-      hand_indexes: pickedHand.value,
-      partner_beans: askList.value,
-    })
+    const picks = { face_up_indexes: pickedFaceUp.value, hand_indexes: pickedHand.value, partner_beans: askList.value }
+    const traded = await move(isBidding.value ? { type: "bid", ...picks } : { type: "trade", partner_index: partner, ...picks })
     if (traded) clear()
   }
 

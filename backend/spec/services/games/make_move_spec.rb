@@ -159,6 +159,18 @@ RSpec.describe Games::MakeMove do
       expect(saved.players[0].hand.cards).to eq(%i[chili])
     end
 
+    it 'lets you make your own offer instead, then the bots carry on' do
+      move('open_bids')
+      expect(saved.bidding).to eq(0)
+
+      expect_alert(move('bid', hand_indexes: [1], face_up_indexes: [0]), 'Pinto turned down your offer')
+      move('bid', hand_indexes: [0], face_up_indexes: [0])
+      expect(saved.players[0].pending).to eq(%i[red])
+
+      move('close_bids')
+      expect(saved.bidding).to be_nil
+    end
+
     it 'declines the offer and keeps your cards' do
       move('decline_offer')
 
@@ -169,6 +181,10 @@ RSpec.describe Games::MakeMove do
 
   it 'rejects answering when no offer waits' do
     expect_alert(move('accept_offer'), 'There is no offer waiting for you')
+  end
+
+  it "rejects bids before you have opened bidding on a bot's deal" do
+    expect_alert(move('bid', face_up_indexes: [0]), "Make your own offer from a bot's deal first")
   end
 
   it 'harvests and buys a third field for the human at any time' do

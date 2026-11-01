@@ -73,6 +73,9 @@ const canFlip = computed(() =>
   live.value && myTurn.value && props.game.phase === "plant" && (props.game.hand_plants > 0 || hand.value.length === 0),
 )
 const isTrading = computed(() => live.value && myTurn.value && props.game.phase === "trade" && !props.game.offer)
+// On a bot's turn, after turning its offer down to make your own.
+const isBidding = computed(() => live.value && props.game.bidding)
+const isDealing = computed(() => isTrading.value || isBidding.value)
 const pendingIndex = computed(() => {
   const pending = me.value?.pending ?? []
   if (!live.value || props.game.phase !== "plant_pending" || pending.length === 0) return null
@@ -111,7 +114,7 @@ const canAcceptOffer = computed(() => {
   })
 })
 
-const trade = useTrade(toRef(props, "game"), isTrading, props.move)
+const trade = useTrade(toRef(props, "game"), isDealing, isBidding, props.move)
 
 watch(() => me.value?.pending.length, () => { pickedPending.value = null })
 
@@ -129,6 +132,7 @@ const instruction = computed(() => {
   if (props.replaying) return `${nameOf(props.replaying.player) || "The table"} is playing...`
   if (props.game.over) return ""
   if (offer.value) return `${nameOf(offer.value.from)} is offering you a deal.`
+  if (isBidding.value) return `Make ${nameOf(props.game.active_index)} an offer for its cards, then press Done.`
   // The traded-beans panel gives its own instructions.
   if (pendingCard.value) return ""
   if (!myTurn.value) return `${nameOf(props.game.active_index)} is playing...`
@@ -272,9 +276,9 @@ function ordinal(place: number): string {
         :active="table.active_index === seat.index && !game.over"
         :winner="game.over && game.winners.includes(seat.index)"
         :bubble="bubbleFor(seat.index)"
-        :answer="isTrading ? trade.answers.value[seat.index] ?? null : null"
-        :counter="isTrading ? trade.counters.value[seat.index] ?? null : null"
-        :can-trade-with="isTrading && trade.answers.value[seat.index] === 'accept'"
+        :answer="isDealing ? trade.answers.value[seat.index] ?? null : null"
+        :counter="isDealing ? trade.counters.value[seat.index] ?? null : null"
+        :can-trade-with="isDealing && trade.answers.value[seat.index] === 'accept'"
         :gift="trade.isGift.value"
         :side="seat.spot === 'left' || seat.spot === 'right' ? seat.spot : 'top'"
         @trade="trade.tradeWith(seat.index)"
@@ -286,7 +290,7 @@ function ordinal(place: number): string {
           :table="table"
           :bean-types="beanTypes"
           :picked-face-up="trade.pickedFaceUp.value"
-          :pickable="isTrading"
+          :pickable="isDealing"
           @pick="trade.toggleFaceUp"
         />
       </div>
@@ -357,8 +361,9 @@ function ordinal(place: number): string {
 
         <div class="action">
           <TradeBar
-            v-if="isTrading"
+            v-if="isDealing"
             :gives="trade.gives.value"
+            :bid-with="isBidding ? nameOf(game.active_index) : null"
             :asks="trade.asks.value"
             :bean-types="beanTypes"
             :status="trade.status.value"
@@ -367,7 +372,7 @@ function ordinal(place: number): string {
             @remove="trade.removeGive"
             @point="pointedBean = $event"
             @clear="trade.clear"
-            @done="move({ type: 'end_trading' })"
+            @done="move({ type: isBidding ? 'close_bids' : 'end_trading' })"
           />
           <p
             v-else-if="instruction"
@@ -474,6 +479,7 @@ function ordinal(place: number): string {
           :busy="busy"
           @accept="(bean) => move(bean ? { type: 'accept_offer', bean } : { type: 'accept_offer' })"
           @decline="move({ type: 'decline_offer' })"
+          @bid="move({ type: 'open_bids' })"
         />
       </div>
     </main>
@@ -483,7 +489,7 @@ function ordinal(place: number): string {
         :hand="hand"
         :bean-types="beanTypes"
         :can-plant-front="canPlantFromHand"
-        :pickable="isTrading"
+        :pickable="isDealing"
         :picked="trade.pickedHand.value"
         @pick="trade.toggleHand"
         @point="pointedBean = $event"

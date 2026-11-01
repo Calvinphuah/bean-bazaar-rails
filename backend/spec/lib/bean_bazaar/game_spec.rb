@@ -347,6 +347,38 @@ RSpec.describe BeanBazaar::Game do
       expect(game.declined?(partner_index: 1, face_up_indexes: [0], choices: %w[chili soy])).to be(true)
     end
 
+    describe 'bidding' do
+      # Calvin offers the Green; the bot makes its own offers instead.
+      before do
+        game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[chili])
+        game.open_bids
+      end
+
+      it 'turns the offer down and waits for the bidder' do
+        expect(game.offer).to be_nil
+        expect(game.bidding).to eq(1)
+        expect(game.declined?(partner_index: 1, face_up_indexes: [0], partner_beans: %w[chili])).to be(true)
+        expect(described_class.from_h(JSON.parse(game.to_h.to_json)).bidding).to eq(1)
+        expect { game.end_trading }.to raise_error(BeanBazaar::IllegalMove, 'Wait for the bids to finish')
+      end
+
+      it "trades the bidder's hand cards for face-up cards and beans from the active hand" do
+        game.bid(face_up_indexes: [1], active_beans: %w[red], bidder_hand_indexes: [0])
+
+        expect(bot.pending).to eq(%i[stink red])
+        expect(calvin.pending).to eq(%i[wax])
+        expect(texts(game).last).to eq('Calvin traded Stink and Red to Bot for Wax')
+        expect { game.bid(active_beans: %w[blue]) }.to raise_error(BeanBazaar::IllegalMove, 'Calvin has no Blue to give')
+      end
+
+      it 'closes, and refuses bids once closed' do
+        game.close_bids
+
+        expect(game.bidding).to be_nil
+        expect { game.bid(face_up_indexes: [0]) }.to raise_error(BeanBazaar::IllegalMove, 'Nobody is making offers right now')
+      end
+    end
+
     it 'can be declined, leaving the cards where they were' do
       game.propose(partner_index: 1, hand_indexes: [0])
       game.decline_offer

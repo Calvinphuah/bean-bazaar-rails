@@ -38,6 +38,7 @@ class Games::MakeMove < ApplicationService
   def apply_move
     check_turn
     check_offer
+    check_bidding
 
     case move_type
     when 'undo' then undo
@@ -50,6 +51,9 @@ class Games::MakeMove < ApplicationService
     when 'buy_third_field' then @engine.buy_third_field(player_index: human_index)
     when 'accept_offer' then @engine.accept_offer(bean: @move_params[:bean])
     when 'decline_offer' then @engine.decline_offer
+    when 'open_bids' then @engine.open_bids
+    when 'bid' then bid
+    when 'close_bids' then @engine.close_bids
     else illegal!('unknown_move', type: move_type)
     end
   end
@@ -97,6 +101,25 @@ class Games::MakeMove < ApplicationService
     return if @engine.offer&.fetch('partner_index') == human_index
 
     illegal!('no_offer')
+  end
+
+  # only while the human has opened bidding on a bot's turn
+  def check_bidding
+    return if !Games::BID_MOVES.include?(move_type)
+    return if @engine.bidding == human_index
+
+    illegal!('not_bidding')
+  end
+
+  # Your hand cards for the active bot's face-up cards and the beans you ask it for.
+  def bid
+    bot_index = @engine.active_index
+    gives = picked_cards(@engine.players[human_index].hand, :hand_indexes)
+    gets = picked_cards(@engine.face_up, :face_up_indexes) + Array(@move_params[:partner_beans]).map(&:to_sym)
+    bot = @game.bot_runner(@engine).bot(bot_index)
+    illegal!('turned_down', name: @engine.active_player.name) if !bot.accepts?(offered: gives, requested: gets)
+
+    @engine.bid(face_up_indexes: numbers(:face_up_indexes), active_beans: Array(@move_params[:partner_beans]), bidder_hand_indexes: numbers(:hand_indexes))
   end
 
   def plant_pending

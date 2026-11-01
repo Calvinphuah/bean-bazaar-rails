@@ -116,8 +116,8 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
       expect(game.offer['hand_indexes']).to eq([0])
     end
 
-    it 'makes at most two offers to the human per turn, then ends trading' do
-      game = game_with(bot, human, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]), offers_this_turn: 2)
+    it 'makes at most three offers to the human per turn, then ends trading' do
+      game = game_with(bot, human, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]), offers_this_turn: 3)
       described_class.new(game, 0).play_trade_phase(partner_indexes: [], human_index: 1)
 
       expect(game.offer).to be_nil
@@ -148,7 +148,7 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
     it 'gives to a poorer bot before a richer human' do
       rich = player('You', %i[soy], coin_cards: %i[red])
       taker = player('Taker', %i[red])
-      game = game_with(bot, rich, taker, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]), offers_this_turn: 2)
+      game = game_with(bot, rich, taker, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]), offers_this_turn: 3)
       described_class.new(game, 0).play_trade_phase(partner_indexes: [2], human_index: 1)
 
       expect(taker.pending).to eq(%i[red])
@@ -208,6 +208,15 @@ RSpec.describe BeanBazaar::Bots::SmartBot do
       fresh = player('Bot', %i[soy blue], fields: [field(:soy, 3), field])
 
       expect(described_class.new(game_with(fresh, player('Other', [])), 0).accepts?(offered: %i[blue], requested: [])).to be(true)
+    end
+
+    it 'judges a bid by the bidder, not by itself as the active player' do
+      active = player('Bot', %i[soy wax], fields: [field(:soy, 3), field])
+      leader = player('Leader', [], coin_cards: %i[red red red])
+      game = game_with(active, leader, phase: :trade, bidding: 1)
+
+      expect(described_class.new(game, 0).accepts?(offered: %i[soy], requested: %i[soy])).to be(false)
+      expect(described_class.new(game_with(active, player('Level', []), phase: :trade, bidding: 1), 0).accepts?(offered: %i[soy], requested: %i[soy])).to be(true)
     end
 
     it 'asks more of a leader before helping them' do

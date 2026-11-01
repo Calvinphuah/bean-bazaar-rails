@@ -17,8 +17,10 @@ module BeanBazaar
       MAX_LEAD_COST = 3
       # A gift fills a field, so it must be worth more than one lonely bean.
       MIN_GIFT_VALUE = 2
-      # On its turn the human gets this many offers, never the same one twice.
-      MAX_OFFERS_TO_HUMAN = 2
+      # On its turn the human gets this many offers, never the same one twice. With
+      # three, a player who trades like a bot wins as often from the human's seat
+      # as from a bot's; with two, the bots' deals among themselves win out.
+      MAX_OFFERS_TO_HUMAN = 3
       # A swap lists up to this many beans it would take, so the human can pick one they hold.
       MAX_CHOICES = 3
 
@@ -171,10 +173,15 @@ module BeanBazaar
         MIN_GIFT_VALUE
       end
 
-      # The asker is always the active player; helping a leader costs more.
+      # Helping a leader costs more.
       def help_cost
-        lead = @game.active_player.coins - player.coins
+        lead = @game.players[asker_index].coins - player.coins
         HELP_COST + lead.clamp(0, MAX_LEAD_COST)
+      end
+
+      # The active player asks, unless this bot is active and someone is bidding to it.
+      def asker_index
+        @game.bidding && @player_index == @game.active_index ? @game.bidding : @game.active_index
       end
 
       # A flipped card that fits a free field is worth keeping: it must be planted

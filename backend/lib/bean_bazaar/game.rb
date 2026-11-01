@@ -13,7 +13,7 @@ module BeanBazaar
     DRAW_COUNT = 3
     LOG_SIZE = 60
 
-    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn, :declined, :lacking
+    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn, :declined, :lacking, :bidding
 
     def self.start(names:, random: Random.new)
       raise ArgumentError, "Bean Bazaar needs #{PLAYER_COUNTS} players" if !PLAYER_COUNTS.cover?(names.size)
@@ -38,12 +38,13 @@ module BeanBazaar
         offers_this_turn: hash.fetch('offers_this_turn', 0),
         declined: hash.fetch('declined', []),
         lacking: hash.fetch('lacking', []).map { |beans| beans.map(&:to_sym) },
+        bidding: hash['bidding'],
       )
     end
 
     def initialize(
       players:, deck:, phase: :plant, active_index: 0, face_up: Hand.new, hand_plants: 0,
-      log: [], event_seq: 0, offer: nil, offers_this_turn: 0, declined: [], lacking: []
+      log: [], event_seq: 0, offer: nil, offers_this_turn: 0, declined: [], lacking: [], bidding: nil
     )
       @players = players
       @deck = deck
@@ -60,6 +61,8 @@ module BeanBazaar
       # Beans each player has said they hold none of, by turning down an offer
       # they couldn't meet. Forgotten once that player draws new cards.
       @lacking = players.each_index.map { |index| lacking.fetch(index, []) }
+      # A player making their own offers to the active player, who waits for them.
+      @bidding = bidding
     end
 
     def to_h
@@ -76,6 +79,7 @@ module BeanBazaar
         offers_this_turn: offers_this_turn,
         declined: declined,
         lacking: lacking,
+        bidding: bidding,
       }
     end
 
@@ -191,10 +195,35 @@ module BeanBazaar
       declined.include?(offer_record(partner_index, cards, partner_beans, choices))
     end
 
+    # Instead of answering the waiting offer, its partner makes their own: the
+    # offer counts as turned down, and the active player waits while they bid.
+    def open_bids
+      waiting = require_offer
+      decline_offer
+      @bidding = waiting['partner_index']
+    end
+
+    # The bidder gives hand cards for the active player's face-up cards and beans
+    # asked for from its hand, as any player may at a real table. Bidding stays
+    # open for more deals until close_bids.
+    def bid(face_up_indexes: [], active_beans: [], bidder_hand_indexes: [])
+      bidder = require_bidding
+      active_hand_indexes = active_player.hand.indexes_of(active_beans)
+      raise IllegalMove, "#{active_player.name} has no #{bean_names(active_beans)} to give" if active_hand_indexes.nil?
+
+      execute_trade(bidder, face_up_indexes, active_hand_indexes, bidder_hand_indexes)
+    end
+
+    def close_bids
+      require_bidding
+      @bidding = nil
+    end
+
     # Face-up cards nobody traded for stay with the active player.
     def end_trading
       require_phase(:trade)
       require_no_offer
+      raise IllegalMove, 'Wait for the bids to finish' if bidding
 
       kept = face_up.take_all
       active_player.receive(kept)
@@ -251,6 +280,13 @@ module BeanBazaar
 
     def require_offer
       offer || raise(IllegalMove, 'There is no offer to answer')
+    end
+
+    def require_bidding
+      require_phase(:trade)
+      raise IllegalMove, 'Nobody is making offers right now' if bidding.nil?
+
+      players[bidding]
     end
 
     def player_at(index)

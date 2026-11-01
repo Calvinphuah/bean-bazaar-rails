@@ -15,7 +15,8 @@ const props = defineProps<{
   busy: boolean
 }>()
 
-const emit = defineEmits<{ accept: [bean?: BeanKey]; decline: [] }>()
+// bid: turn this deal down to make your own offers to the bot instead.
+const emit = defineEmits<{ accept: [bean?: BeanKey]; decline: []; bid: [] }>()
 
 const hasChoices = computed(() => props.offer.choices.length > 0)
 const canGiveAny = computed(() => props.offer.choices.some((bean) => props.hand.includes(bean)))
@@ -120,6 +121,13 @@ const canGiveAny = computed(() => props.offer.choices.some((bean) => props.hand.
         @click="emit('decline')"
       >
         No thanks
+      </button>
+      <button
+        class="secondary"
+        :disabled="busy"
+        @click="emit('bid')"
+      >
+        Make my own offer
       </button>
       <button
         v-if="!hasChoices"

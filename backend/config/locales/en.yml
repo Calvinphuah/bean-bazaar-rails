@@ -13,6 +13,7 @@ en:
         no_player: "There is no player %{index}"
         no_bean_to_give: "%{name} doesn't have those beans to give"
         no_offer: "There is no offer waiting for you"
+        not_bidding: "Make your own offer from a bot's deal first"
         unknown_move: "Unknown move: %{type}"
         wait_for_turn: "Wait for your turn"
         nothing_to_undo: "There's nothing to undo"

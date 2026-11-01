@@ -32,18 +32,40 @@ class Games::QuoteTrade < ApplicationService
   end
 
   def check_trade_phase
+    return if bidding?
+
     illegal!('wait_for_turn') if @engine.active_index != human_index || @engine.phase != :trade
+  end
+
+  def bidding?
+    @engine.bidding == human_index
   end
 
   # @return [Array<Hash>] one { player:, answer: } per bot; answer is accept, decline or missing.
   #   A decline may carry counter: { give:, ask: }, a smaller deal that bot would take.
   def collect_answers
+    return collect_bid_answer if bidding?
+
     offered = picked_cards(@engine.face_up, :face_up_indexes) + picked_cards(@engine.active_player.hand, :hand_indexes)
     runner = @game.bot_runner(@engine)
 
     @answers = bot_indexes.map do |index|
       { player: index }.merge(answer_for(runner.bot(index), @engine.players[index], offered))
     end
+  end
+
+  # While bidding only the active bot answers: your hand cards for its face-up
+  # cards and the beans you ask it for.
+  def collect_bid_answer
+    @answers = [{ player: @engine.active_index, answer: bid_answer }]
+  end
+
+  def bid_answer
+    return 'missing' if @engine.active_player.hand.indexes_of(asked_beans).nil?
+
+    offered = picked_cards(@engine.players[human_index].hand, :hand_indexes)
+    requested = picked_cards(@engine.face_up, :face_up_indexes) + asked_beans.map(&:to_sym)
+    @game.bot_runner(@engine).bot(@engine.active_index).accepts?(offered: offered, requested: requested) ? 'accept' : 'decline'
   end
 
   def answer_for(bot, partner, offered)

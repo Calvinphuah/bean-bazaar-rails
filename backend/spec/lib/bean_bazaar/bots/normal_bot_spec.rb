@@ -12,16 +12,17 @@ RSpec.describe BeanBazaar::Bots::NormalBot do
   let(:deck) { BeanBazaar::Deck.new(draw_pile: Array.new(30, :chili)) }
 
   describe '#play_trade_phase' do
-    it 'stops dealing with bots after two deals a turn' do
+    it 'stops dealing with bots after its deals for the turn' do
+      cards = %i[red wax stink green black_eyed]
       bot = player('Bot', %i[soy], fields: [field(:soy, 2), field(:blue, 3)])
       human = player('You', [], coin_cards: %i[red])
-      takers = Array.new(3) { |index| player("Taker#{index}", %i[red wax stink]) }
-      game = BeanBazaar::Game.new(players: [bot, human, *takers], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red wax stink]),
-                                  offers_this_turn: 2)
-      described_class.new(game, 0).play_trade_phase(partner_indexes: [2, 3, 4], human_index: 1)
+      takers = Array.new(cards.size) { |index| player("Taker#{index}", cards) }
+      game = BeanBazaar::Game.new(players: [bot, human, *takers], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(cards),
+                                  offers_this_turn: BeanBazaar::Bots::SmartBot::MAX_OFFERS_TO_HUMAN)
+      described_class.new(game, 0).play_trade_phase(partner_indexes: (2...(2 + cards.size)).to_a, human_index: 1)
 
-      # The human has had their offers this turn, so the third card stays with the bot.
-      expect(takers.sum { |taker| taker.pending.size }).to eq(2)
+      # The human has had their offers this turn, so the last card stays with the bot.
+      expect(takers.sum { |taker| taker.pending.size }).to eq(described_class::MAX_BOT_DEALS)
       expect(bot.pending.size).to eq(1)
       expect(game.offer).to be_nil
     end

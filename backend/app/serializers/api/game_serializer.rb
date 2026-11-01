@@ -19,6 +19,8 @@ class Api::GameSerializer
       face_up: @engine.face_up.cards,
       players: @engine.players.each_with_index.map { |player, index| player_json(player, index) },
       offer: offer_json,
+      # You turned a bot's offer down to make your own; it waits for you.
+      bidding: @engine.bidding == @game.human_index,
       bot_level: @game.bot_level,
       can_undo: @game.undo_states.any?,
       log: @engine.log,

@@ -50,6 +50,28 @@ RSpec.describe Games::QuoteTrade do
     expect(result).to include(player: 2, answer: 'decline', counter: { give: %w[soy soy], ask: %w[wax] })
   end
 
+  describe 'while you bid on a bot turn' do
+    # Pinto is trading its flipped red and soy; you made your own offer instead of its deal.
+    let(:you) { player('You', %i[red blue]) }
+    let(:engine) do
+      BeanBazaar::Game.new(
+        players: [you, pinto, lima],
+        deck: BeanBazaar::Deck.new(draw_pile: Array.new(20, :chili)),
+        phase: :trade,
+        active_index: 1,
+        face_up: BeanBazaar::Hand.new(%i[red soy]),
+        bidding: 0,
+      )
+    end
+
+    it 'asks only the active bot, judging your hand cards for its cards' do
+      # Your red grows Pinto's red field; its own red it keeps.
+      expect(answers(hand_indexes: [0], face_up_indexes: [1])).to eq(1 => 'accept')
+      expect(answers(hand_indexes: [1], face_up_indexes: [0])).to eq(1 => 'decline')
+      expect(answers(hand_indexes: [0], partner_beans: ['wax'])).to eq(1 => 'missing')
+    end
+  end
+
   it "only quotes during the human's trade phase" do
     game.update!(state: engine.to_h.merge(phase: :plant))
     result = described_class.new(game, face_up_indexes: [0]).call

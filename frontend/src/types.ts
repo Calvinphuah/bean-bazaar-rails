@@ -72,6 +72,8 @@ export interface GameState {
   face_up: BeanKey[]
   players: PlayerState[]
   offer: Offer | null
+  // You turned a bot's offer down to make your own; that bot waits for you.
+  bidding: boolean
   bot_level: BotLevel
   // Your last plant, harvest or field purchase can be taken back.
   can_undo: boolean
@@ -100,3 +102,6 @@ export type Move =
   | { type: "plant_pending"; pending_index: number; field_index: number }
   | { type: "harvest"; field_index: number }
   | ({ type: "trade" } & TradeOffer)
+  | ({ type: "bid" } & Omit<TradeOffer, "partner_index">)
+  | { type: "open_bids" }
+  | { type: "close_bids" }

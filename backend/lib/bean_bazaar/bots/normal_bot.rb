@@ -3,13 +3,13 @@ module BeanBazaar
     # The middle level: plants, harvests and offers deals like SmartBot, but
     # trades more kindly. It makes few deals with the other bots, charges nothing
     # extra for helping the leader and takes more of the gifts it is offered, so
-    # a good player wins about a fair share.
+    # a good player wins more often than at Smart.
     class NormalBot < SmartBot
       # Any gift that does it some good is welcome.
       KIND_GIFT_VALUE = 1
-      # Deals among themselves are what make bots strong. With two a turn, a good
-      # player wins about a fair share in testing; with one, nearly every game.
-      MAX_BOT_DEALS = 2
+      # Deals among themselves are what make bots strong. With four a turn a good
+      # player wins about 40% of games in testing; with one, nearly every game.
+      MAX_BOT_DEALS = 4
 
       private
 

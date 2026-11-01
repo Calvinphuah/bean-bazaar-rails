@@ -22,7 +22,11 @@ class Games
   ACTIVE_PLAYER_MOVES = %w[plant_from_hand flip_cards trade end_trading].freeze
 
   # Answers to an offer a bot made to the human, allowed on the bot's turn.
-  OFFER_ANSWERS = %w[accept_offer decline_offer].freeze
+  # open_bids turns it down to make the human's own offers instead.
+  OFFER_ANSWERS = %w[accept_offer decline_offer open_bids].freeze
+
+  # The human's own offers to the active bot, once they have opened bidding.
+  BID_MOVES = %w[bid close_bids].freeze
 
   # Moves the human can take back: they reveal no cards and no bot reacts to them.
   UNDOABLE_MOVES = %w[plant_from_hand harvest plant_pending buy_third_field].freeze
