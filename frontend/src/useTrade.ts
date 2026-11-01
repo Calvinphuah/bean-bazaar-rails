@@ -38,6 +38,8 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     }),
   ])
   const hasOffer = computed(() => gives.value.length + askList.value.length > 0)
+  // Giving cards and asking for nothing back is a gift, not a trade.
+  const isGift = computed(() => gives.value.length > 0 && askList.value.length === 0)
   // No bot can hand over more cards than it holds, so asks stop there.
   const maxAsk = computed(() => {
     const current = game.value
@@ -83,8 +85,8 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     askCapped.value = false
   }
 
-  // Loads a bot's counter-offer into the trade: keep only the picks it wants, ask for what it offered.
-  function takeCounter(player: number): void {
+  // Makes a bot's counter-offer: keep only the picks it wants, ask for what it offered, then trade.
+  async function takeCounter(player: number): Promise<void> {
     const counter = counters.value[player]
     if (!counter) return
     const wanted = [...counter.give]
@@ -99,6 +101,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     pickedHand.value = keep(pickedHand.value, (index) => hand.value[index])
     asks.value = counter.ask.reduce<Record<BeanKey, number>>((all, bean) => ({ ...all, [bean]: (all[bean] ?? 0) + 1 }), {})
     askCapped.value = false
+    await tradeWith(player)
   }
 
   async function refreshQuote(): Promise<void> {
@@ -157,6 +160,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     answers,
     counters,
     gives,
+    isGift,
     status,
     acceptors,
     toggleFaceUp: (index: number) => toggle(pickedFaceUp, index),

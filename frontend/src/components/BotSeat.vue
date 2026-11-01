@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import BeanCard from "./BeanCard.vue"
-import { coinText } from "../rules"
+import { coinText, coinsFor } from "../rules"
 import type { BeanType, TableSnapshot } from "../types"
 import type { QuoteAnswer, TradeCounter } from "../api"
 
@@ -19,6 +19,8 @@ const props = defineProps<{
   // The smaller deal this bot would take instead, after saying no.
   counter: TradeCounter | null
   canTradeWith: boolean
+  // Your offer asks for nothing back, so the button says give instead of trade.
+  gift: boolean
   // Which edge of the table the bot sits on; its fields face the middle.
   side: "left" | "right" | "top"
 }>()
@@ -30,8 +32,15 @@ const emit = defineEmits<{ trade: []; counter: [] }>()
 const MAX_BACKS = 6
 const backs = computed(() => Math.min(props.seat.hand_size, MAX_BACKS))
 
+type Field = TableSnapshot["players"][number]["fields"][number]
+const worth = (field: Field): number => coinsFor(field.bean ? props.beanTypes[field.bean] : undefined, field.count)
+
 const beanList = (beans: string[]): string => beans.map((bean) => props.beanTypes[bean]?.name ?? bean).join(", ") || "nothing"
 const counterText = computed(() => (props.counter ? `You give ${beanList(props.counter.give)}, you get ${beanList(props.counter.ask)}` : ""))
+// Each side of the counter-offer as the cards themselves, so the deal reads at a glance.
+const counterSides = computed(() =>
+  props.counter ? [{ label: "You give", beans: props.counter.give }, { label: "You get", beans: props.counter.ask }] : [],
+)
 
 const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   accept: "Deal!",
@@ -106,6 +115,15 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
               size="mini"
             />
             <span class="badge">{{ field.count }}</span>
+            <!-- What harvesting would pay right now, so you can see who is close to cashing in. -->
+            <span
+              v-if="worth(field)"
+              class="worth"
+              :title="`Worth ${coinText(worth(field))} if harvested now`"
+            ><img
+              src="/cards/coin.webp"
+              alt=""
+            >{{ worth(field) }}</span>
           </template>
         </div>
       </div>
@@ -122,18 +140,45 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
         class="small"
         @click="emit('trade')"
       >
-        Trade with {{ name }}
+        {{ gift ? "Give to" : "Trade with" }} {{ name }}
       </button>
-      <!-- A no with a smaller deal attached loads that deal into your trade. -->
-      <button
+      <!-- A no with a smaller deal attached shows that deal, ready to take in one click. -->
+      <div
         v-else-if="answer === 'decline' && counter"
-        class="small secondary"
-        :title="counterText"
-        :aria-label="`Use ${name}'s counter-offer: ${counterText}`"
-        @click="emit('counter')"
+        class="counter"
       >
-        Counter-offer
-      </button>
+        <strong>{{ name }} would do</strong>
+        <div class="deal">
+          <div
+            v-for="dealSide in counterSides"
+            :key="dealSide.label"
+            class="deal-side"
+          >
+            <span>{{ dealSide.label }}</span>
+            <div class="chips">
+              <img
+                v-for="(bean, index) in dealSide.beans"
+                :key="index"
+                class="chip"
+                :src="`/cards/${bean}-240.webp`"
+                :alt="beanTypes[bean]?.name ?? bean"
+              >
+              <!-- An empty side keeps the box's shape and names the deal a gift. -->
+              <span
+                v-if="!dealSide.beans.length"
+                class="chip empty"
+              >Gift</span>
+            </div>
+          </div>
+        </div>
+        <button
+          class="small"
+          :aria-label="`Take ${name}'s deal: ${counterText}`"
+          @click="emit('counter')"
+        >
+          Take deal
+        </button>
+      </div>
       <span v-else>{{ ANSWER_LABELS[answer] }}</span>
     </div>
   </div>
@@ -224,6 +269,25 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
   border-radius: 999px;
   padding: 0 4px;
 }
+.worth {
+  position: absolute;
+  bottom: -6px;
+  left: -6px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 5px 0 2px;
+  background: var(--panel);
+  color: var(--gold-dark);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+.worth img { width: 13px; }
 
 .bubble {
   position: absolute;
@@ -282,6 +346,18 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
 .answer:has(button) { padding: 0; background: none; box-shadow: none; }
 .answer.decline { background: #f4cfcf; }
 .answer.missing { background: #e5ddd0; color: var(--muted); }
+/* A counter-offer is a card, not a pill: it shows both sides of the deal. */
+.answer:has(.counter) { padding: 8px 10px; border-radius: 12px; background: var(--panel); border: 2px solid var(--gold); }
+/* Taller than a pill, so it hangs below a side seat and beside the top one, off the cards. */
+.side-left .answer:has(.counter), .side-right .answer:has(.counter) { top: calc(100% + 6px); bottom: auto; }
+.side-top .answer:has(.counter) { top: 0; bottom: auto; left: calc(100% + 34px); transform: none; }
+.counter { display: grid; justify-items: center; gap: 6px; }
+.counter strong { font-size: 12px; }
+.deal { display: flex; gap: 10px; }
+.deal-side { display: grid; justify-items: center; gap: 3px; font-size: 11px; color: var(--muted); }
+.chips { display: flex; gap: 3px; min-height: 30px; align-items: center; }
+.chip { width: 26px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 3px; border: 1.5px solid var(--ink); }
+.chip.empty { display: grid; place-items: center; border-style: dashed; border-color: var(--muted); font-size: 8px; font-weight: 800; color: var(--muted); }
 
 .pop-enter-active, .pop-leave-active { transition: all .2s ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.92); }

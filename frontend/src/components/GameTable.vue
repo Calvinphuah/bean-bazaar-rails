@@ -225,6 +225,7 @@ const youWon = computed(() => props.game.winners.includes(you.value))
         :answer="isTrading ? trade.answers.value[seat.index] ?? null : null"
         :counter="isTrading ? trade.counters.value[seat.index] ?? null : null"
         :can-trade-with="isTrading && trade.answers.value[seat.index] === 'accept'"
+        :gift="trade.isGift.value"
         :side="seat.spot === 'left' || seat.spot === 'right' ? seat.spot : 'top'"
         @trade="trade.tradeWith(seat.index)"
         @counter="trade.takeCounter(seat.index)"
