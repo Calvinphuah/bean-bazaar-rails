@@ -55,8 +55,20 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
     Object.entries(answers.value).filter(([, answer]) => answer === "accept").map(([player]) => Number(player)),
   )
 
+  // While bidding only the active bot answers, so the status speaks about it by name.
+  function bidStatus(): string {
+    const name = game.value?.players[game.value.active_index]?.name ?? "The bot"
+    if (!hasOffer.value) return `Pick what you give and what you want from ${name}.`
+    if (quoting.value) return `Asking ${name}...`
+    const answer = Object.values(answers.value)[0]
+    if (answer === "accept") return `${name} will trade.`
+    if (answer === "missing") return `${name} doesn't have those beans.`
+    return `${name} won't take this. Try changing it.`
+  }
+
   const status = computed(() => {
     if (askCapped.value) return `No bot holds more than ${maxAsk.value} cards, so that's the most you can ask for.`
+    if (isBidding.value) return bidStatus()
     if (!hasOffer.value) return "Bots answer as soon as you pick."
     if (quoting.value) return "Asking the table..."
     const all = Object.values(answers.value)
