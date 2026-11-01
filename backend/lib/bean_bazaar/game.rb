@@ -18,7 +18,7 @@ module BeanBazaar
     def self.start(names:, random: Random.new)
       raise ArgumentError, "Bean Bazaar needs #{PLAYER_COUNTS} players" if !PLAYER_COUNTS.cover?(names.size)
 
-      deck = Deck.shuffled(random: random)
+      deck = Deck.shuffled(player_count: names.size, random: random)
       players = names.map { |name| Player.new(name: name, hand: Hand.new(deck.draw(HAND_SIZE))) }
       new(players: players, deck: deck)
     end

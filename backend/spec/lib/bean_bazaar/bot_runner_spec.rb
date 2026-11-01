@@ -13,7 +13,7 @@ RSpec.describe BeanBazaar::BotRunner do
         described_class.new(game, human_index: nil).run
 
         expect(game).to be_over
-        expect(card_total(game)).to eq(104)
+        expect(card_total(game)).to eq(BeanBazaar::BeanType.full_deck(player_count).size)
         expect(game.winners).not_to be_empty
       end
     end
@@ -39,7 +39,7 @@ RSpec.describe BeanBazaar::BotRunner do
     runner.run
 
     expect(game.active_index).to eq(0)
-    expect(card_total(game)).to eq(104)
+    expect(card_total(game)).to eq(BeanBazaar::BeanType.full_deck(3).size)
   end
 
   it 'waits while the human still has pending cards to plant' do

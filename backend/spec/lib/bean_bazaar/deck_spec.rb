@@ -3,10 +3,10 @@ require 'bean_bazaar'
 RSpec.describe BeanBazaar::Deck do
   describe '.shuffled' do
     it 'holds the full deck in a repeatable order for a seed' do
-      deck = described_class.shuffled(random: Random.new(1))
-      same_seed = described_class.shuffled(random: Random.new(1))
+      deck = described_class.shuffled(player_count: 3, random: Random.new(1))
+      same_seed = described_class.shuffled(player_count: 3, random: Random.new(1))
 
-      expect(deck.draw_pile.tally).to eq(BeanBazaar::BeanType.full_deck.tally)
+      expect(deck.draw_pile.tally).to eq(BeanBazaar::BeanType.full_deck(3).tally)
       expect(deck.draw_pile).to eq(same_seed.draw_pile)
     end
   end

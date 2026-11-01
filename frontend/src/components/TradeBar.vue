@@ -41,6 +41,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
   <div
     class="trade panel"
     data-tour="trade"
+    :style="{ '--beans': beans.length }"
   >
     <div class="section">
       <h3>You give</h3>
@@ -150,17 +151,18 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
 </template>
 
 <style scoped>
-.trade { width: 430px; display: grid; gap: 6px; padding: 10px 12px; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
+/* One 50px column per bean in this game: 8 beans, or 10 at a 5-player table. */
+.trade { width: calc(var(--beans) * 50px + 24px); display: grid; gap: 6px; padding: 10px 12px; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
 .section { display: grid; gap: 5px; }
 h3 { font-size: 14px; }
 .hint { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
-/* Same 8 columns and card size as the asks below, so both rows line up. */
-.chips { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; min-height: 50px; padding-top: 4px; align-items: center; justify-items: center; }
+/* Same columns as the asks below, so both rows line up. */
+.chips { display: grid; grid-template-columns: repeat(var(--beans), 1fr); gap: 2px; min-height: 50px; padding-top: 4px; align-items: center; justify-items: center; }
 .chips > .hint { grid-column: 1 / -1; justify-self: start; }
 .chip-button { position: relative; padding: 3px; transition: transform .15s ease; }
 .chip-button:hover { transform: translateY(-2px); }
 .chip { display: block; width: 32px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 4px; border: 2px solid var(--ink); }
-.asks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.asks { display: grid; grid-template-columns: repeat(var(--beans), 1fr); gap: 2px; }
 .ask { position: relative; display: grid; justify-items: center; gap: 2px; padding: 3px; border-radius: 8px; transition: background .15s ease; }
 .ask:hover { background: var(--panel-dark); }
 .ask.chosen { background: #cfe9c5; }

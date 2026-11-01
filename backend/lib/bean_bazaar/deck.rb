@@ -8,8 +8,8 @@ module BeanBazaar
 
     attr_reader :draw_pile, :discard_pile, :run_outs
 
-    def self.shuffled(random: Random.new)
-      new(draw_pile: BeanType.full_deck.shuffle(random: random), random: random)
+    def self.shuffled(player_count:, random: Random.new)
+      new(draw_pile: BeanType.full_deck(player_count).shuffle(random: random), random: random)
     end
 
     def self.from_h(hash)

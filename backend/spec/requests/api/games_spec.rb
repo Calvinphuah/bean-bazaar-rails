@@ -11,6 +11,7 @@ RSpec.describe 'Api::Games', type: :request do
       expect(game['players'].first['hand'].size).to eq(5)
       expect(game['players'].drop(1).pluck('hand')).to all(be_nil)
       expect(game['players'].drop(1).pluck('hand_size')).to all(eq(5))
+      # Coffee and Golden only join 5-player games.
       expect(game['bean_types'].size).to eq(8)
       expect(game).to include('phase' => 'plant', 'active_index' => 0, 'over' => false, 'winners' => [])
       expect(game['success_message']).to eq('Cards dealt. Good luck!')
