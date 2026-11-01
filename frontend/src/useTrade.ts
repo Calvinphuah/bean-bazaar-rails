@@ -40,8 +40,11 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
     }),
   ])
   const hasOffer = computed(() => gives.value.length + askList.value.length > 0)
-  // Giving cards and asking for nothing back is a gift, not a trade.
-  const isGift = computed(() => gives.value.length > 0 && askList.value.length === 0)
+  // Giving cards and asking for nothing back is a gift, not a trade. While
+  // bidding, picked face-up cards are ones you get, so they make it a trade.
+  const isGift = computed(() =>
+    gives.value.length > 0 && askList.value.length === 0 && !(isBidding.value && pickedFaceUp.value.length > 0),
+  )
   // No bot can hand over more cards than it holds, so asks stop there.
   const maxAsk = computed(() => {
     const current = game.value
