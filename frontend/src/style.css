@@ -9,6 +9,8 @@
   --accent: #c6283a;
   --muted: #8a7a66;
   --ok: #3f8a3a;
+  /* A soft overshoot, like a card dropped on felt settling. */
+  --ease-bounce: cubic-bezier(.34, 1.56, .64, 1);
   font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   color: #f6efe3;
 }
@@ -72,4 +74,13 @@ button.small { padding: 3px 10px; font-size: 13px; }
   border: 2px solid var(--ink);
   border-radius: 12px;
   padding: 12px;
+}
+
+/* For anyone who asks for less motion, every animation and transition settles at once. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

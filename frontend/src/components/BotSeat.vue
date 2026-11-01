@@ -2,10 +2,13 @@
 import { computed } from "vue"
 import BeanCard from "./BeanCard.vue"
 import { coinText, coinsFor } from "../rules"
+import { useRollingNumber } from "../useRollingNumber"
 import type { BeanType, TableSnapshot } from "../types"
 import type { QuoteAnswer, TradeCounter } from "../api"
 
 const props = defineProps<{
+  // The bot's seat number, so table effects can find its plate and fields.
+  seatIndex: number
   name: string
   avatar: string
   seat: TableSnapshot["players"][number]
@@ -31,6 +34,7 @@ const emit = defineEmits<{ trade: []; counter: [] }>()
 // would spill off the table edge or under the bot's fields.
 const MAX_BACKS = 6
 const backs = computed(() => Math.min(props.seat.hand_size, MAX_BACKS))
+const coins = useRollingNumber(() => props.seat.coins)
 
 type Field = TableSnapshot["players"][number]["fields"][number]
 const worth = (field: Field): number => coinsFor(field.bean ? props.beanTypes[field.bean] : undefined, field.count)
@@ -73,9 +77,15 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
     </Transition>
 
     <div class="player">
-      <div class="plate">
+      <div
+        class="plate"
+        :data-anchor="`plate-${seatIndex}`"
+      >
         <div class="avatar">
+          <!-- Re-keyed on each answer, so the bot nods at a deal and shakes its head at a no. -->
           <img
+            :key="answer ?? 'quiet'"
+            :class="answer ? `react-${answer}` : ''"
             :src="`/bots/${avatar}.webp`"
             alt=""
           >
@@ -88,9 +98,11 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
         <div class="who">
           <strong>{{ name }}</strong>
           <span class="coins"><img
+            :key="coins.hop.value"
+            class="coin-hop"
             src="/cards/coin.webp"
             alt=""
-          >{{ coinText(seat.coins) }}</span>
+          >{{ coinText(coins.shown.value) }}</span>
         </div>
       </div>
 
@@ -110,7 +122,10 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
     </div>
 
     <div class="table-side">
-      <div class="fields">
+      <div
+        class="fields"
+        :data-anchor="`fields-${seatIndex}`"
+      >
         <div
           v-for="(field, index) in seat.fields"
           :key="index"
@@ -227,12 +242,21 @@ const answerLabel = (answer: QuoteAnswer): string => VOICES[props.name]?.[answer
 .seat.winner .plate { box-shadow: 0 0 0 4px var(--ok); }
 .avatar { position: relative; width: 44px; height: 44px; flex: none; }
 .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--ink); background: var(--panel); }
+/* The bot whose turn it is bobs gently, like it's thinking. */
+.seat.active .avatar { animation: bob 1.6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-3px) rotate(-2deg); } }
+.react-accept { animation: nod .5s ease-out; }
+@keyframes nod { 30% { transform: translateY(4px); } 60% { transform: translateY(-2px); } }
+.react-decline, .react-missing { animation: shake .45s ease-out; }
+@keyframes shake { 20%, 60% { transform: rotate(-9deg); } 40%, 80% { transform: rotate(9deg); } }
 .turn-dot { position: absolute; right: -2px; bottom: -2px; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); border: 2px solid var(--ink); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(1.25); } }
 .who { display: grid; line-height: 1.2; }
 .who strong { font-family: "Fraunces", serif; font-size: 17px; }
 .coins { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 800; color: var(--gold-dark); }
 .coins img { width: 16px; }
+.coin-hop { animation: coin-hop .3s var(--ease-bounce); }
+@keyframes coin-hop { 40% { transform: translateY(-5px) scale(1.2) rotate(-8deg); } }
 
 .hand { position: relative; height: 62px; display: flex; justify-content: center; align-items: flex-end; }
 .hand img {

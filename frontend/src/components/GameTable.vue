@@ -9,9 +9,11 @@ import OfferCard from "./OfferCard.vue"
 import PhaseTracker from "./PhaseTracker.vue"
 import PlayerHand from "./PlayerHand.vue"
 import TableCenter from "./TableCenter.vue"
+import TableEffects from "./TableEffects.vue"
 import TradeBar from "./TradeBar.vue"
 import TutorialGuide from "./TutorialGuide.vue"
 import { MAX_FIELDS, MAX_HAND_PLANTS, THIRD_FIELD_PRICE, accepts, canHarvest, coinText } from "../rules"
+import { useRollingNumber } from "../useRollingNumber"
 import { useTrade } from "../useTrade"
 import type { BeanKey, BeanType, FieldState, GameState, LogEvent, Move, PlayerState, TableSnapshot } from "../types"
 
@@ -52,6 +54,7 @@ const frontCard = computed(() => hand.value[0] ?? null)
 const pointedType = computed(() => (pointedBean.value ? beanTypes.value[pointedBean.value] : undefined))
 const pointedCopies = computed(() => hand.value.filter((bean) => bean === pointedBean.value).length)
 const myFields = computed<FieldState[]>(() => myTable.value?.fields ?? [])
+const myCoins = useRollingNumber(() => myTable.value?.coins ?? 0)
 
 const seats = computed(() => {
   const count = props.game.players.length
@@ -281,11 +284,15 @@ function ordinal(place: number): string {
       </div>
     </header>
 
-    <main class="felt">
+    <main
+      class="felt"
+      :class="`season-${Math.min(table.deck.run_outs + 1, 3)}`"
+    >
       <BotSeat
         v-for="seat in seats"
         :key="seat.index"
         data-tour="seats"
+        :seat-index="seat.index"
         :class="`spot-${seat.spot}`"
         :name="nameOf(seat.index)"
         :avatar="seat.avatar"
@@ -320,13 +327,17 @@ function ordinal(place: number): string {
             <div
               class="my-plate"
               :class="{ active: myTurn && !replaying }"
+              :data-anchor="`plate-${you}`"
             >
+              <!-- Re-keyed on every coin, so the coin hops as the count ticks up. -->
               <img
+                :key="myCoins.hop.value"
+                class="coin-hop"
                 src="/cards/coin.webp"
                 alt=""
               >
               <strong>You</strong>
-              <span>{{ coinText(myTable?.coins ?? 0) }}</span>
+              <span>{{ coinText(myCoins.shown.value) }}</span>
             </div>
             <div
               v-if="lockedPending.length"
@@ -356,6 +367,7 @@ function ordinal(place: number): string {
           <div
             class="farm"
             data-tour="fields"
+            :data-anchor="`fields-${you}`"
           >
             <BeanField
               v-for="(field, index) in myFields"
@@ -635,6 +647,15 @@ function ordinal(place: number): string {
       </div>
     </Transition>
 
+    <!-- Outside the zoomed table, so coins and cards land where it measures. -->
+    <Teleport to="body">
+      <TableEffects
+        :event="replaying"
+        :player-names="game.players.map((player) => player.name)"
+        :bean-types="beanTypes"
+      />
+    </Teleport>
+
     <!-- Outside the zoomed table, so the highlight lines up with what it measures. -->
     <Teleport to="body">
       <TutorialGuide
@@ -664,6 +685,24 @@ function ordinal(place: number): string {
 
 /* Three bands: room for the bots along the top, the market, then your farm. */
 .felt { position: relative; display: grid; grid-template-rows: 132px minmax(0, 1fr) auto; justify-items: center; align-items: center; }
+/* Lantern light drifts slowly over the table, so quiet moments still feel alive;
+   it glows a little warmer each season as the market heats up. */
+.felt::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 45% 35% at 50% 45%, rgba(255, 214, 150, var(--glow)), transparent 70%);
+  animation: drift 24s ease-in-out infinite alternate;
+}
+.felt.season-1 { --glow: .1; }
+.felt.season-2 { --glow: .16; }
+.felt.season-3 { --glow: .24; }
+@keyframes drift {
+  from { transform: translate(-6%, -3%) scale(1); }
+  to { transform: translate(6%, 4%) scale(1.12); }
+}
 .felt :deep(.seat) { position: absolute; z-index: 2; }
 /* Seats sit on an arc around the market: sides low on the edges, the rest along the top. */
 .felt :deep(.spot-left) { left: 2.5%; top: 150px; }
@@ -691,6 +730,8 @@ function ordinal(place: number): string {
 }
 .action { min-width: 320px; display: grid; gap: 10px; align-content: center; justify-items: start; }
 .plate-row { display: flex; gap: 8px; align-items: center; }
+.coin-hop { animation: coin-hop .3s var(--ease-bounce); }
+@keyframes coin-hop { 40% { transform: translateY(-6px) scale(1.15) rotate(-8deg); } }
 .my-plate {
   display: flex;
   align-items: center;

@@ -37,7 +37,7 @@ function onDrop(): void {
 <template>
   <div
     class="field"
-    :class="{ empty: beanType === null, droppable: !!plantLabel, over: dragOver }"
+    :class="{ empty: beanType === null, droppable: !!plantLabel, over: dragOver, grown: !!beanType && !next }"
     @dragover.prevent="dragOver = !!plantLabel"
     @dragleave="dragOver = false"
     @drop.prevent="onDrop"
@@ -59,11 +59,20 @@ function onDrop(): void {
           size="small"
         />
       </div>
-      <BeanCard
-        :bean="beanType"
-        size="small"
-      />
-      <span class="badge">{{ field.count }}</span>
+      <!-- Keyed by the count, so each new bean lands on the pile and bumps the badge. -->
+      <div
+        :key="field.count"
+        class="top"
+      >
+        <BeanCard
+          :bean="beanType"
+          size="small"
+        />
+      </div>
+      <span
+        :key="field.count"
+        class="badge"
+      >{{ field.count }}</span>
     </div>
     <div
       v-else
@@ -120,12 +129,20 @@ function onDrop(): void {
 .field.empty { border-color: rgba(255, 246, 220, .4); }
 .field.droppable { border-color: var(--gold); border-style: solid; box-shadow: 0 0 18px rgba(246, 201, 56, .5); }
 .field.over { background: rgba(246, 201, 56, .2); transform: scale(1.04); }
+/* A field at its top payout glows softly: time to sell. */
+.field.grown { animation: ripe 2.4s ease-in-out infinite; }
+@keyframes ripe { 50% { box-shadow: 0 0 22px rgba(246, 201, 56, .55); } }
+.top { animation: land .45s var(--ease-bounce) both; }
+@keyframes land {
+  from { transform: translateY(-26px) rotate(-4deg) scale(1.06); opacity: .4; }
+}
 /* Room above each top card (and empty patch) for the banners behind it, so fields line up. */
 .pile { position: relative; isolation: isolate; margin-top: 12px; }
 /* Dimmed a touch, so the top card still reads first. */
 .layer { position: absolute; inset: 0; filter: brightness(.88); }
 .badge {
   position: absolute;
+  animation: bump .35s var(--ease-bounce);
   top: -9px;
   right: -11px;
   min-width: 28px;
@@ -142,6 +159,7 @@ function onDrop(): void {
   border-radius: 999px;
   padding: 0 6px;
 }
+@keyframes bump { 40% { transform: scale(1.35); } }
 .placeholder {
   width: 92px;
   aspect-ratio: 63 / 88;

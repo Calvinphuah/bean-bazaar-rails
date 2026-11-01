@@ -199,8 +199,12 @@ const deckStyle = computed(() => {
 /* Room for two cards even before the flip, so the deck doesn't jump sideways. */
 .face-up { display: flex; gap: 14px; min-height: 160px; min-width: 238px; justify-content: center; align-items: center; }
 
-.flip-enter-active { transition: transform .45s ease, opacity .45s ease; }
-.flip-enter-from { opacity: 0; transform: rotateY(90deg) translateX(-60px) scale(.8); }
+/* Each flipped card hops off the deck, turns face up mid-air and settles. */
+.flip-enter-active { animation: hop .6s var(--ease-bounce) both; }
+@keyframes hop {
+  0% { opacity: 0; transform: translateX(-90px) translateY(0) rotateY(90deg) scale(.8); }
+  55% { opacity: 1; transform: translateX(-10px) translateY(-18px) rotateY(0) scale(1.05); }
+}
 .flip-leave-active { transition: all .3s ease; }
 .flip-leave-to { opacity: 0; transform: translateY(40px) scale(.85); }
 </style>
