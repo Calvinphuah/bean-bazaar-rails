@@ -13,8 +13,10 @@ module BeanBazaar
       def play_plant_phase
         plant_front if !player.hand.empty?
         plant_front if wants_second_plant?
+        return if @game.over?
+
         buy_field_if_rich
-        @game.flip_cards
+        @game.flip_cards if @game.phase == :plant
       end
 
       # Offers face-up cards it can't use to other bots, then ends trading.

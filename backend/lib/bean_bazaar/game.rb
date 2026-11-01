@@ -100,8 +100,9 @@ module BeanBazaar
     end
 
     def plant_from_hand(field_index)
-      require_phase(:plant)
       raise IllegalMove, "You can plant at most #{MAX_HAND_PLANTS} cards from your hand" if hand_plants >= MAX_HAND_PLANTS
+
+      require_phase(:plant)
       raise IllegalMove, 'Your hand is empty' if active_player.hand.empty?
 
       card = active_player.hand.front
@@ -109,6 +110,7 @@ module BeanBazaar
       active_player.hand.take_front
       @hand_plants += 1
       note(:plant, active_index, "#{active_player.name} planted #{bean_names([card])}")
+      flip_cards if !can_plant_from_hand?
     end
 
     def flip_cards
@@ -210,6 +212,11 @@ module BeanBazaar
     end
 
     private
+
+    # Once a second card is planted, or the hand runs out, the only move left is the flip.
+    def can_plant_from_hand?
+      hand_plants < MAX_HAND_PLANTS && !active_player.hand.empty?
+    end
 
     def require_phase(expected)
       raise IllegalMove, "You can't do that during the #{phase} phase" if phase != expected

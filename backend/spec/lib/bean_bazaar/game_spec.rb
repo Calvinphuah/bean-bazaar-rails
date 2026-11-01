@@ -33,17 +33,31 @@ RSpec.describe BeanBazaar::Game do
   describe 'phase 1: planting from hand' do
     it 'plants the front card, then optionally the second' do
       game.plant_from_hand(0)
+
+      expect(game.phase).to eq(:plant)
+
       game.plant_from_hand(1)
 
       expect(calvin.fields.map(&:bean)).to eq(%i[blue soy])
       expect(calvin.hand.cards).to eq(%i[red])
     end
 
-    it 'stops after two cards' do
+    it 'flips straight away after the second card and refuses a third' do
       game.plant_from_hand(0)
       game.plant_from_hand(1)
 
+      expect(game.phase).to eq(:trade)
+      expect(game.face_up.cards).to eq(%i[green stink])
       expect { game.plant_from_hand(0) }.to raise_error(BeanBazaar::IllegalMove, 'You can plant at most 2 cards from your hand')
+    end
+
+    it 'flips straight away when the first plant empties the hand' do
+      calvin.hand.take_all
+      calvin.hand.add(%i[blue])
+      game.plant_from_hand(0)
+
+      expect(game.phase).to eq(:trade)
+      expect(game.face_up.cards).to eq(%i[green stink])
     end
 
     it "keeps the card in hand when the field doesn't fit" do

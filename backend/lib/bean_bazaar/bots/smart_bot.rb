@@ -11,8 +11,10 @@ module BeanBazaar
         buy_field_if_rich
         plant_front if !player.hand.empty?
         plant_front if wants_second_plant?
+        return if @game.over?
+
         cash_in_full_fields
-        @game.flip_cards
+        @game.flip_cards if @game.phase == :plant
       end
 
       # Trades with the bots first, then makes one offer to the human per turn.

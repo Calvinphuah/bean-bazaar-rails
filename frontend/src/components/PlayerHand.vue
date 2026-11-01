@@ -129,7 +129,8 @@ function onDragStart(event: DragEvent): void {
               <span
                 v-if="index === 0"
                 class="next"
-              >Plant next</span>
+                :class="{ waiting: !canPlantFront }"
+              >{{ canPlantFront ? "Plant next" : "Next" }}</span>
               <button
                 v-if="pickable"
                 class="card-button"
@@ -204,6 +205,8 @@ function onDragStart(event: DragEvent): void {
   border-radius: 999px;
   border: 2px solid var(--ink);
 }
+/* The front card can't be planted right now, so its tag stops shouting. */
+.next.waiting { background: var(--panel-dark); color: var(--ink); }
 .grabbable { cursor: grab; }
 .grabbable:active { cursor: grabbing; }
 .preview {
