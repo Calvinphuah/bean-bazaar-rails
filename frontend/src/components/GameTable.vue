@@ -381,8 +381,22 @@ function ordinal(place: number): string {
         </div>
 
         <div class="action">
+          <!-- Beside your fields, not over them, so you can see what fits before answering. -->
+          <OfferCard
+            v-if="offer"
+            :offer="offer"
+            :from-name="nameOf(offer.from)"
+            :avatar="avatarOf(offer.from)"
+            :bean-types="beanTypes"
+            :can-accept="canAcceptOffer"
+            :hand="hand"
+            :busy="busy"
+            @accept="(bean) => move(bean ? { type: 'accept_offer', bean } : { type: 'accept_offer' })"
+            @decline="move({ type: 'decline_offer' })"
+            @bid="move({ type: 'open_bids' })"
+          />
           <TradeBar
-            v-if="isDealing"
+            v-else-if="isDealing"
             :gives="trade.gives.value"
             :bid-with="isBidding ? nameOf(game.active_index) : null"
             :asks="trade.asks.value"
@@ -484,24 +498,6 @@ function ordinal(place: number): string {
             </div>
           </div>
         </div>
-      </div>
-
-      <div
-        v-if="offer"
-        class="offer-spot"
-      >
-        <OfferCard
-          :offer="offer"
-          :from-name="nameOf(offer.from)"
-          :avatar="avatarOf(offer.from)"
-          :bean-types="beanTypes"
-          :can-accept="canAcceptOffer"
-          :hand="hand"
-          :busy="busy"
-          @accept="(bean) => move(bean ? { type: 'accept_offer', bean } : { type: 'accept_offer' })"
-          @decline="move({ type: 'decline_offer' })"
-          @bid="move({ type: 'open_bids' })"
-        />
       </div>
     </main>
 
@@ -702,7 +698,6 @@ function ordinal(place: number): string {
 .felt :deep(.spot-top-left) { left: 24%; top: 0; transform: translateX(-50%); }
 .felt :deep(.spot-top-right) { right: 24%; top: 0; transform: translateX(50%); }
 .middle { grid-row: 2; z-index: 1; }
-.offer-spot { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: rgba(20, 10, 4, .45); }
 
 .me { position: relative; z-index: 3; display: grid; gap: 6px; padding: 0 24px; }
 .row { display: flex; gap: 28px; align-items: flex-end; justify-content: center; }

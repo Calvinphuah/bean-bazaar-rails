@@ -141,7 +141,9 @@ const canGiveAny = computed(() => props.offer.choices.some((bean) => props.hand.
 </template>
 
 <style scoped>
-.offer { width: min(560px, 100%); display: grid; gap: 12px; padding: 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, .6); }
+/* Sits beside your fields like the trade bar, so it matches its size and shadow. */
+.offer { width: min(500px, 100%); display: grid; gap: 10px; padding: 14px; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); animation: offer-in .35s var(--ease-bounce); }
+@keyframes offer-in { from { opacity: 0; transform: translateY(14px) scale(.96); } }
 .from { display: flex; align-items: center; gap: 10px; font-family: "Fraunces", serif; font-size: 20px; }
 .from img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
 .deal { display: flex; align-items: center; justify-content: center; gap: 14px; }
