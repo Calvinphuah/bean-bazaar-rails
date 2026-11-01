@@ -69,8 +69,14 @@ RSpec.describe BeanBazaar::BotRunner do
     game = BeanBazaar::Game.new(players: [bot, human, other], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[red]))
     described_class.new(game, human_index: 1, bot_class: BeanBazaar::Bots::SmartBot).run
 
-    expect(game.offer).to include('partner_index' => 1)
+    expect(game.offer).to include('partner_index' => 1, 'choices' => %w[soy blue])
     expect(game.phase).to eq(:trade)
+
+    # Turned down, the swap comes back once as a gift, never as the same offer.
+    game.decline_offer
+    described_class.new(game, human_index: 1, bot_class: BeanBazaar::Bots::SmartBot).run
+
+    expect(game.offer).to include('partner_index' => 1, 'choices' => [])
 
     game.decline_offer
     described_class.new(game, human_index: 1, bot_class: BeanBazaar::Bots::SmartBot).run

@@ -314,7 +314,7 @@ RSpec.describe BeanBazaar::Game do
     it 'waits for the partner to accept, then trades the asked-for beans' do
       game.propose(partner_index: 1, face_up_indexes: [0], partner_beans: %w[chili])
 
-      expect(game.offer).to eq('partner_index' => 1, 'face_up_indexes' => [0], 'hand_indexes' => [], 'partner_beans' => %w[chili])
+      expect(game.offer).to eq('partner_index' => 1, 'face_up_indexes' => [0], 'hand_indexes' => [], 'partner_beans' => %w[chili], 'choices' => [])
       expect(texts(game).last).to eq('Calvin offers Bot Green for Chili')
       expect { game.end_trading }.to raise_error(BeanBazaar::IllegalMove, 'Answer the waiting offer first')
 
@@ -326,6 +326,27 @@ RSpec.describe BeanBazaar::Game do
       expect(game.offers_this_turn).to eq(1)
     end
 
+    it 'lets the partner pick any one of the choices' do
+      game.propose(partner_index: 1, face_up_indexes: [0], choices: %w[soy chili])
+
+      expect(texts(game).last).to eq('Calvin offers Bot Green for Soy or Chili')
+      expect { game.accept_offer(bean: 'soy') }.to raise_error(BeanBazaar::IllegalMove, 'You have no Soy to give')
+      expect { game.accept_offer(bean: 'wax') }.to raise_error(BeanBazaar::IllegalMove, 'Pick one of Soy or Chili to give')
+
+      game.accept_offer(bean: 'chili')
+
+      expect(calvin.pending).to eq(%i[chili])
+      expect(bot.pending).to eq(%i[green])
+    end
+
+    it 'remembers which choices a partner lacked when they decline' do
+      game.propose(partner_index: 1, face_up_indexes: [0], choices: %w[soy chili])
+      game.decline_offer
+
+      expect(game.lacking[1]).to eq(%i[soy])
+      expect(game.declined?(partner_index: 1, face_up_indexes: [0], choices: %w[chili soy])).to be(true)
+    end
+
     it 'can be declined, leaving the cards where they were' do
       game.propose(partner_index: 1, hand_indexes: [0])
       game.decline_offer
@@ -333,6 +354,15 @@ RSpec.describe BeanBazaar::Game do
       expect(game.offer).to be_nil
       expect(calvin.hand.cards).to eq(%i[soy red])
       expect(texts(game).last).to eq("Bot turned down Calvin's offer")
+    end
+
+    it 'remembers a turned-down offer by its beans, even after a save' do
+      game.propose(partner_index: 1, hand_indexes: [0], partner_beans: %w[chili])
+      game.decline_offer
+
+      expect(game.declined?(partner_index: 1, hand_indexes: [0], partner_beans: %w[chili])).to be(true)
+      expect(game.declined?(partner_index: 1, hand_indexes: [1], partner_beans: %w[chili])).to be(false)
+      expect(described_class.from_h(JSON.parse(game.to_h.to_json)).declined).to eq(game.declined)
     end
 
     it 'describes gifts and plain asks' do

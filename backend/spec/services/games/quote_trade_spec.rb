@@ -9,10 +9,10 @@ RSpec.describe Games::QuoteTrade do
     BeanBazaar::Player.new(name: name, hand: BeanBazaar::Hand.new(hand), fields: fields)
   end
 
-  # Pinto grows red and holds a spare green; Lima grows wax and soy and holds wax.
+  # Pinto grows red and holds a spare green; Lima grows wax and soy and holds two wax.
   let(:you) { player('You', %i[blue soy]) }
   let(:pinto) { player('Pinto', %i[green stink], fields: [field(:red, 2), field]) }
-  let(:lima) { player('Lima', %i[wax], fields: [field(:wax, 2), field(:soy, 2)]) }
+  let(:lima) { player('Lima', %i[wax wax], fields: [field(:wax, 2), field(:soy, 2)]) }
   let(:engine) do
     BeanBazaar::Game.new(
       players: [you, pinto, lima],
@@ -44,10 +44,10 @@ RSpec.describe Games::QuoteTrade do
   end
 
   it 'passes on the smaller deal a declining bot would take instead' do
-    # Lima won't give up the wax it grows, but would take your soy for nothing.
-    result = described_class.new(game, hand_indexes: [1], partner_beans: ['wax']).call[:payload][:answers]
+    # Two soy aren't worth both of Lima's wax, but they are worth one.
+    result = described_class.new(game, face_up_indexes: [1], hand_indexes: [1], partner_beans: %w[wax wax]).call[:payload][:answers]
 
-    expect(result).to include(player: 2, answer: 'decline', counter: { give: %w[soy], ask: [] })
+    expect(result).to include(player: 2, answer: 'decline', counter: { give: %w[soy soy], ask: %w[wax] })
   end
 
   it "only quotes during the human's trade phase" do

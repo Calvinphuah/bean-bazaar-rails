@@ -48,7 +48,7 @@ class Games::MakeMove < ApplicationService
     when 'plant_pending' then plant_pending
     when 'harvest' then @engine.harvest(player_index: human_index, field_index: number(:field_index))
     when 'buy_third_field' then @engine.buy_third_field(player_index: human_index)
-    when 'accept_offer' then @engine.accept_offer
+    when 'accept_offer' then @engine.accept_offer(bean: @move_params[:bean])
     when 'decline_offer' then @engine.decline_offer
     else illegal!('unknown_move', type: move_type)
     end

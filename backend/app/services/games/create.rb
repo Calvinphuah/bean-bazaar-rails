@@ -1,6 +1,6 @@
 class Games::Create < ApplicationService
   # @param bot_count [Integer / String] how many bots the human plays against
-  # @param bot_level [String] "easy" or "smart", see Games::BOT_LEVELS
+  # @param bot_level [String] "easy", "normal" or "smart", see Games::BOT_LEVELS
   # @param random [Random] shuffles the deck; seeded in specs
   def initialize(bot_count, bot_level = Games::DEFAULT_BOT_LEVEL, random: Random.new)
     super()

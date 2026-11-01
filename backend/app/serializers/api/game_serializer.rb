@@ -39,14 +39,15 @@ class Api::GameSerializer
     }
   end
 
-  # A bot's offer waiting for the human, with the cards spelled out.
+  # A bot's offer waiting for the human, with the cards spelled out. choices are
+  # beans the bot would take instead of ask, any one of them.
   def offer_json
     offer = @engine.offer
     return nil if offer.nil? || offer['partner_index'] != @game.human_index
 
     gives = offer['face_up_indexes'].map { |index| @engine.face_up.cards[index] } +
             offer['hand_indexes'].map { |index| @engine.active_player.hand.cards[index] }
-    { from: @engine.active_index, give: gives, ask: offer['partner_beans'] }
+    { from: @engine.active_index, give: gives, ask: offer['partner_beans'], choices: offer.fetch('choices', []) }
   end
 
   def winner_indexes

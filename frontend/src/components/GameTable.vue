@@ -470,8 +470,9 @@ function ordinal(place: number): string {
           :avatar="avatarOf(offer.from)"
           :bean-types="beanTypes"
           :can-accept="canAcceptOffer"
+          :hand="hand"
           :busy="busy"
-          @accept="move({ type: 'accept_offer' })"
+          @accept="(bean) => move(bean ? { type: 'accept_offer', bean } : { type: 'accept_offer' })"
           @decline="move({ type: 'decline_offer' })"
         />
       </div>

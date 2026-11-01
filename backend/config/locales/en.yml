@@ -5,7 +5,7 @@ en:
         success_default: "Cards dealt. Good luck!"
         error_default: "The game couldn't be dealt, please try again"
         invalid_bot_count: "Choose %{min} to %{max} bots"
-        invalid_bot_level: "Choose easy or smart bots"
+        invalid_bot_level: "Choose easy, normal or smart bots"
       make_move:
         error_default: "The move couldn't be saved, please try again"
         turned_down: "%{name} turned down your offer"

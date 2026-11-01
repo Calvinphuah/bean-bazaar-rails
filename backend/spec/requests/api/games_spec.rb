@@ -20,7 +20,7 @@ RSpec.describe 'Api::Games', type: :request do
       post '/api/games', as: :json
 
       expect(response.parsed_body['game']['players'].size).to eq(4)
-      expect(response.parsed_body['game']).to include('bot_level' => 'smart', 'offer' => nil)
+      expect(response.parsed_body['game']).to include('bot_level' => 'normal', 'offer' => nil)
     end
 
     it 'plays easy bots when asked' do
@@ -73,7 +73,7 @@ RSpec.describe 'Api::Games', type: :request do
       game = Game.create!(state: engine.to_h)
       get "/api/games/#{game.id}"
 
-      expect(response.parsed_body['game']['offer']).to eq('from' => 1, 'give' => %w[red wax], 'ask' => ['blue'])
+      expect(response.parsed_body['game']['offer']).to eq('from' => 1, 'give' => %w[red wax], 'ask' => ['blue'], 'choices' => [])
     end
 
     it 'hides an offer made to someone else' do

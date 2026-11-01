@@ -98,22 +98,26 @@ module BeanBazaar
 
       def offer_unwanted_cards(partner_indexes)
         loop do
-          face_up_index = @game.face_up.cards.index { |card| !grows?(card) }
+          face_up_index = unwanted_face_up_index
           break if face_up_index.nil?
           break if !offer(partner_indexes, face_up_indexes: [face_up_index])
         end
       end
 
-      # Offers face-up or hand cards for a bean it grows when the partner holds one,
-      # otherwise as a gift. False if nobody wants them.
+      def unwanted_face_up_index
+        @game.face_up.cards.index { |card| !grows?(card) }
+      end
+
+      # Offers face-up or hand cards to the poorest partner first, so no seat gets
+      # every gift. It asks for the bean it wants when that partner holds one, the
+      # way the human must, otherwise gives them away. False if nobody wants them.
       def offer(partner_indexes, face_up_indexes: [], hand_indexes: [])
         cards = face_up_indexes.map { |index| @game.face_up.cards[index] } + hand_indexes.map { |index| player.hand.cards[index] }
 
-        partner_indexes.each do |partner_index|
-          partner = self.class.new(@game, partner_index)
-          wanted_index = @game.players[partner_index].hand.cards.index { |hand_card| grows?(hand_card) }
+        partner_indexes.sort_by { |index| [@game.players[index].coins, index] }.each do |partner_index|
+          wanted_index = asked_index(partner_index)
           requested = wanted_index.nil? ? [] : [@game.players[partner_index].hand.cards[wanted_index]]
-          next if !partner.accepts?(offered: cards, requested: requested)
+          next if !self.class.new(@game, partner_index).accepts?(offered: cards, requested: requested)
 
           @game.trade(
             partner_index: partner_index,
@@ -124,6 +128,18 @@ module BeanBazaar
           return true
         end
         false
+      end
+
+      # Where the bean it asks for sits in the partner's hand; nil when the partner
+      # has none, which is all the asker learns, just like a "Don't have it".
+      def asked_index(partner_index)
+        bean = wanted_bean(partner_index)
+        bean && @game.players[partner_index].hand.cards.index(bean)
+      end
+
+      # The bean of its first planted field the partner hasn't said they lack.
+      def wanted_bean(partner_index)
+        player.fields.find { |field| !field.empty? && !@game.lacking[partner_index].include?(field.bean) }&.bean
       end
     end
   end

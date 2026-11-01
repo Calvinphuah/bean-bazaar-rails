@@ -1,18 +1,24 @@
 <script setup lang="ts">
+import { computed } from "vue"
 import BeanCard from "./BeanCard.vue"
-import type { BeanType, Offer } from "../types"
+import type { BeanKey, BeanType, Offer } from "../types"
 
-defineProps<{
+const props = defineProps<{
   offer: Offer
   fromName: string
   avatar: string
   beanTypes: Record<string, BeanType>
   // You hold every bean the bot asks for, so accepting can work.
   canAccept: boolean
+  // Your hand, to tell which of the offer's choices you can give.
+  hand: BeanKey[]
   busy: boolean
 }>()
 
-const emit = defineEmits<{ accept: []; decline: [] }>()
+const emit = defineEmits<{ accept: [bean?: BeanKey]; decline: [] }>()
+
+const hasChoices = computed(() => props.offer.choices.length > 0)
+const canGiveAny = computed(() => props.offer.choices.some((bean) => props.hand.includes(bean)))
 </script>
 
 <template>
@@ -51,7 +57,33 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
       <div class="arrow">
         ⇄
       </div>
-      <div class="side">
+      <!-- Any one of these: each card is its own Give button, greyed out when you have none. -->
+      <div
+        v-if="hasChoices"
+        class="side"
+      >
+        <span>You give one of</span>
+        <div class="cards">
+          <button
+            v-for="bean in offer.choices"
+            :key="bean"
+            class="choice"
+            :disabled="busy || !hand.includes(bean)"
+            :title="hand.includes(bean) ? '' : `You have no ${beanTypes[bean]?.name ?? bean}`"
+            @click="emit('accept', bean)"
+          >
+            <BeanCard
+              v-if="beanTypes[bean]"
+              :bean="beanTypes[bean]!"
+            />
+            <span class="give">Give {{ beanTypes[bean]?.name ?? bean }}</span>
+          </button>
+        </div>
+      </div>
+      <div
+        v-else
+        class="side"
+      >
         <span>You give</span>
         <div class="cards">
           <template
@@ -72,7 +104,7 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
     </div>
 
     <p
-      v-if="!canAccept"
+      v-if="hasChoices ? !canGiveAny : !canAccept"
       class="missing"
     >
       You don't have the beans {{ fromName }} asked for.
@@ -90,6 +122,7 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
         No thanks
       </button>
       <button
+        v-if="!hasChoices"
         :disabled="busy || !canAccept"
         @click="emit('accept')"
       >
@@ -100,7 +133,7 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
 </template>
 
 <style scoped>
-.offer { width: min(460px, 100%); display: grid; gap: 12px; padding: 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, .6); }
+.offer { width: min(560px, 100%); display: grid; gap: 12px; padding: 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, .6); }
 .from { display: flex; align-items: center; gap: 10px; font-family: "Fraunces", serif; font-size: 20px; }
 .from img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
 .deal { display: flex; align-items: center; justify-content: center; gap: 14px; }
@@ -110,5 +143,9 @@ const emit = defineEmits<{ accept: []; decline: [] }>()
 .missing { margin: 0; color: var(--accent); font-weight: 800; text-align: center; }
 .hint { margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
 .muted { color: var(--muted); font-size: 13px; }
+.choice { display: grid; justify-items: center; gap: 6px; padding: 4px; background: none; box-shadow: none; border-radius: 12px; transition: transform .15s ease; }
+.choice:not(:disabled):hover { transform: translateY(-3px); }
+.choice:disabled { opacity: .4; filter: grayscale(.6); }
+.give { padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--ink); font-size: 12px; font-weight: 800; border: 2px solid var(--ink); }
 .buttons { display: flex; justify-content: center; gap: 10px; }
 </style>

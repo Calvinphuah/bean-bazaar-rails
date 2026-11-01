@@ -4,7 +4,7 @@ class Api::GamesController < Api::BaseController
   # POST: /api/games
   # @overload create
   #   @param bot_count [Integer] how many bots to play against, default 3
-  #   @param bot_level [String] "easy" or "smart", default smart
+  #   @param bot_level [String] "easy", "normal" or "smart", default normal
   #   @return [JSON] object: { game }
   def create
     result = Games::Create.new(

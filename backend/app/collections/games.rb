@@ -12,9 +12,10 @@ class Games
   # Bot difficulty, mapped to the bot class that plays it.
   BOT_LEVELS = {
     'easy' => 'BeanBazaar::Bots::SimpleBot',
+    'normal' => 'BeanBazaar::Bots::NormalBot',
     'smart' => 'BeanBazaar::Bots::SmartBot',
   }.freeze
-  DEFAULT_BOT_LEVEL = 'smart'.freeze
+  DEFAULT_BOT_LEVEL = 'normal'.freeze
 
   # Moves only the active player can make; harvesting, buying a field and
   # planting pending cards are allowed on any turn.

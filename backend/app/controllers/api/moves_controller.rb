@@ -21,7 +21,7 @@ class Api::MovesController < Api::BaseController
 
   def move_params
     params.expect(
-      move: [:type, :field_index, :pending_index, :partner_index, face_up_indexes: [], hand_indexes: [], partner_beans: []],
+      move: [:type, :field_index, :pending_index, :partner_index, :bean, face_up_indexes: [], hand_indexes: [], partner_beans: []],
     )
   end
 end

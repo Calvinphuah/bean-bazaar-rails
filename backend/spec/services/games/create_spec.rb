@@ -29,16 +29,17 @@ RSpec.describe Games::Create do
     expect(described_class.new('lots').call[:extra_params][:alert]).to eq('Choose 2 to 4 bots')
   end
 
-  it 'plays easy or smart bots' do
+  it 'plays easy, normal or smart bots, normal by default' do
     expect(described_class.new(2, 'easy').call[:payload].bot_level).to eq('easy')
-    expect(described_class.new(2).call[:payload].bot_level).to eq('smart')
+    expect(described_class.new(2, 'smart').call[:payload].bot_level).to eq('smart')
+    expect(described_class.new(2).call[:payload].bot_level).to eq('normal')
   end
 
   it 'rejects an unknown bot level' do
     result = described_class.new(2, 'genius').call
 
     expect(result).to include(success: false)
-    expect(result[:extra_params][:alert]).to eq('Choose easy or smart bots')
+    expect(result[:extra_params][:alert]).to eq('Choose easy, normal or smart bots')
   end
 
   it 'rolls back and reports a save failure' do

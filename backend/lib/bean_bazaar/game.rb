@@ -13,7 +13,7 @@ module BeanBazaar
     DRAW_COUNT = 3
     LOG_SIZE = 60
 
-    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn, :lacking
+    attr_reader :players, :deck, :phase, :active_index, :face_up, :hand_plants, :log, :offer, :offers_this_turn, :declined, :lacking
 
     def self.start(names:, random: Random.new)
       raise ArgumentError, "Bean Bazaar needs #{PLAYER_COUNTS} players" if !PLAYER_COUNTS.cover?(names.size)
@@ -36,13 +36,14 @@ module BeanBazaar
         event_seq: hash.fetch('event_seq', 0),
         offer: hash['offer'],
         offers_this_turn: hash.fetch('offers_this_turn', 0),
+        declined: hash.fetch('declined', []),
         lacking: hash.fetch('lacking', []).map { |beans| beans.map(&:to_sym) },
       )
     end
 
     def initialize(
       players:, deck:, phase: :plant, active_index: 0, face_up: Hand.new, hand_plants: 0,
-      log: [], event_seq: 0, offer: nil, offers_this_turn: 0, lacking: []
+      log: [], event_seq: 0, offer: nil, offers_this_turn: 0, declined: [], lacking: []
     )
       @players = players
       @deck = deck
@@ -54,6 +55,8 @@ module BeanBazaar
       @event_seq = event_seq
       @offer = offer
       @offers_this_turn = offers_this_turn
+      # Offers turned down this turn, by the beans in them, so nobody makes the same one twice.
+      @declined = declined
       # Beans each player has said they hold none of, by turning down an offer
       # they couldn't meet. Forgotten once that player draws new cards.
       @lacking = players.each_index.map { |index| lacking.fetch(index, []) }
@@ -71,6 +74,7 @@ module BeanBazaar
         event_seq: @event_seq,
         offer: offer,
         offers_this_turn: offers_this_turn,
+        declined: declined,
         lacking: lacking,
       }
     end
@@ -136,14 +140,15 @@ module BeanBazaar
       execute_trade(player_at(partner_index), face_up_indexes, hand_indexes, partner_hand_indexes)
     end
 
-    # The active player asks another player for bean types, since hands are hidden.
+    # The active player asks another player for bean types, since hands are hidden:
+    # all of partner_beans, plus any one of choices, which the partner picks.
     # The offer waits until that player accepts or declines it.
-    def propose(partner_index:, face_up_indexes: [], hand_indexes: [], partner_beans: [])
+    def propose(partner_index:, face_up_indexes: [], hand_indexes: [], partner_beans: [], choices: [])
       require_phase(:trade)
       require_no_offer
       partner = player_at(partner_index)
       raise IllegalMove, "You can't trade with yourself" if partner.equal?(active_player)
-      raise IllegalMove, 'An offer needs at least one card' if [face_up_indexes, hand_indexes, partner_beans].all?(&:empty?)
+      raise IllegalMove, 'An offer needs at least one card' if [face_up_indexes, hand_indexes, partner_beans, choices].all?(&:empty?)
 
       face_up.check!(face_up_indexes)
       active_player.hand.check!(hand_indexes)
@@ -152,17 +157,20 @@ module BeanBazaar
         'face_up_indexes' => face_up_indexes,
         'hand_indexes' => hand_indexes,
         'partner_beans' => partner_beans.map(&:to_s),
+        'choices' => choices.map(&:to_s),
       }
       @offers_this_turn += 1
       note(:offer, active_index, offer_message(partner))
     end
 
-    def accept_offer
+    # @param bean [String, Symbol, nil] which of the offer's choices the partner gives
+    def accept_offer(bean: nil)
       waiting = require_offer
       partner = player_at(waiting['partner_index'])
-      partner_hand_indexes = partner.hand.indexes_of(waiting['partner_beans'])
+      asked = waiting['partner_beans'] + chosen_bean(waiting, bean)
+      partner_hand_indexes = partner.hand.indexes_of(asked)
       # Only the player answering sees this, so it speaks to them.
-      raise IllegalMove, "You have no #{bean_names(waiting['partner_beans'])} to give" if partner_hand_indexes.nil?
+      raise IllegalMove, "You have no #{bean_names(asked)} to give" if partner_hand_indexes.nil?
 
       @offer = nil
       execute_trade(partner, waiting['face_up_indexes'], waiting['hand_indexes'], partner_hand_indexes)
@@ -172,8 +180,15 @@ module BeanBazaar
       waiting = require_offer
       partner = player_at(waiting['partner_index'])
       @offer = nil
-      remember_lacking(waiting['partner_index'], waiting['partner_beans'].map(&:to_sym))
+      @declined = declined + [offer_record(waiting['partner_index'], offer_cards(waiting), waiting['partner_beans'], offer_choices(waiting))]
+      remember_lacking(waiting['partner_index'], (waiting['partner_beans'] + offer_choices(waiting)).map(&:to_sym))
       note(:decline, waiting['partner_index'], "#{partner.name} turned down #{active_player.name}'s offer")
+    end
+
+    # Whether this offer, card for card, was already turned down this turn.
+    def declined?(partner_index:, face_up_indexes: [], hand_indexes: [], partner_beans: [], choices: [])
+      cards = face_up_indexes.map { |index| face_up.cards[index] } + hand_indexes.map { |index| active_player.hand.cards[index] }
+      declined.include?(offer_record(partner_index, cards, partner_beans, choices))
     end
 
     # Face-up cards nobody traded for stay with the active player.
@@ -273,6 +288,7 @@ module BeanBazaar
       @active_index = (active_index + 1) % players.size
       @hand_plants = 0
       @offers_this_turn = 0
+      @declined = []
       @phase = :plant
       note(:turn, active_index, "#{active_player.name}'s turn")
     end
@@ -305,8 +321,8 @@ module BeanBazaar
       @log = (log + [entry]).last(LOG_SIZE)
     end
 
-    def bean_names(cards)
-      cards.map { |card| BeanType.find(card.to_sym).name }.join(' and ')
+    def bean_names(cards, joiner: ' and ')
+      cards.map { |card| BeanType.find(card.to_sym).name }.join(joiner)
     end
 
     def coin_text(coins)
@@ -320,14 +336,41 @@ module BeanBazaar
       "#{active_player.name} traded #{bean_names(offered)} to #{partner.name} for #{bean_names(requested)}"
     end
 
+    def offer_cards(waiting)
+      waiting['face_up_indexes'].map { |index| face_up.cards[index] } + waiting['hand_indexes'].map { |index| active_player.hand.cards[index] }
+    end
+
+    def offer_record(partner_index, cards, partner_beans, choices)
+      {
+        'partner_index' => partner_index,
+        'gives' => cards.map(&:to_s).sort,
+        'partner_beans' => partner_beans.map(&:to_s).sort,
+        'choices' => choices.map(&:to_s).sort,
+      }
+    end
+
+    # Offers saved before choices existed have none.
+    def offer_choices(waiting)
+      waiting.fetch('choices', [])
+    end
+
+    # @return [Array<String>] the picked choice, or nothing when the offer has no choices
+    def chosen_bean(waiting, bean)
+      choices = offer_choices(waiting)
+      return [] if choices.empty?
+      raise IllegalMove, "Pick one of #{bean_names(choices, joiner: ' or ')} to give" if !choices.include?(bean.to_s)
+
+      [bean.to_s]
+    end
+
     def offer_message(partner)
-      gives = offer['face_up_indexes'].map { |index| face_up.cards[index] } +
-              offer['hand_indexes'].map { |index| active_player.hand.cards[index] }
-      asks = offer['partner_beans']
-      return "#{active_player.name} asks #{partner.name} for #{bean_names(asks)}" if gives.empty?
+      gives = offer_cards(offer)
+      # Choices read "Soy or Blue"; a bot offers them instead of fixed asks.
+      asks = offer['partner_beans'].any? ? bean_names(offer['partner_beans']) : bean_names(offer_choices(offer), joiner: ' or ')
+      return "#{active_player.name} asks #{partner.name} for #{asks}" if gives.empty?
       return "#{active_player.name} offers #{partner.name} #{bean_names(gives)} as a gift" if asks.empty?
 
-      "#{active_player.name} offers #{partner.name} #{bean_names(gives)} for #{bean_names(asks)}"
+      "#{active_player.name} offers #{partner.name} #{bean_names(gives)} for #{asks}"
     end
   end
 end

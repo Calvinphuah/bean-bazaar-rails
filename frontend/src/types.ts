@@ -3,7 +3,7 @@ export type BeanKey = string
 
 export type Phase = "plant" | "trade" | "plant_pending" | "over"
 
-export type BotLevel = "easy" | "smart"
+export type BotLevel = "easy" | "normal" | "smart"
 
 export interface BeanType {
   key: BeanKey
@@ -56,6 +56,8 @@ export interface Offer {
   from: number
   give: BeanKey[]
   ask: BeanKey[]
+  // Beans the bot would take instead of ask: you give any one of them.
+  choices: BeanKey[]
 }
 
 export interface GameState {
@@ -93,7 +95,7 @@ export type Move =
   | { type: "undo" }
   | { type: "end_trading" }
   | { type: "buy_third_field" }
-  | { type: "accept_offer" }
+  | { type: "accept_offer"; bean?: BeanKey }
   | { type: "decline_offer" }
   | { type: "plant_pending"; pending_index: number; field_index: number }
   | { type: "harvest"; field_index: number }

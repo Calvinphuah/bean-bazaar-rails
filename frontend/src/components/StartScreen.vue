@@ -8,11 +8,12 @@ defineProps<{ busy: boolean }>()
 const emit = defineEmits<{ start: [botCount: number, botLevel: BotLevel]; tutorial: [] }>()
 
 const botCount = ref(3)
-const botLevel = ref<BotLevel>("smart")
+const botLevel = ref<BotLevel>("normal")
 
 const LEVELS: { level: BotLevel; label: string; hint: string }[] = [
   { level: "easy", label: "Easy", hint: "Bots plant and trade by simple rules." },
-  { level: "smart", label: "Smart", hint: "Bots plan ahead, cash in at the right time, and offer you deals." },
+  { level: "normal", label: "Normal", hint: "Bots plan ahead and offer you deals, but go easy on each other." },
+  { level: "smart", label: "Smart", hint: "Bots plan ahead, deal hard with each other, and watch who's winning." },
 ]
 </script>
 

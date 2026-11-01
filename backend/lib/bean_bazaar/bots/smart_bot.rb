@@ -11,8 +11,16 @@ module BeanBazaar
       # A bean it plants towards a coin; a bean starting a fresh field is worth less.
       GROWING_BEAN_VALUE = 2
       NEW_FIELD_BEAN_VALUE = 1
-      # Every bean the asker wants helps a rival, so a fair swap must pay for it.
+      # Every bean the asker wants helps a rival, so a fair swap must pay for it,
+      # and more so for every coin the asker is ahead, up to MAX_LEAD_COST.
       HELP_COST = 1
+      MAX_LEAD_COST = 3
+      # A gift fills a field, so it must be worth more than one lonely bean.
+      MIN_GIFT_VALUE = 2
+      # On its turn the human gets this many offers, never the same one twice.
+      MAX_OFFERS_TO_HUMAN = 2
+      # A swap lists up to this many beans it would take, so the human can pick one they hold.
+      MAX_CHOICES = 3
 
       def play_plant_phase
         buy_field_if_rich
@@ -24,14 +32,16 @@ module BeanBazaar
         @game.flip_cards if @game.phase == :plant
       end
 
-      # Trades with the bots first, then makes one offer to the human per turn.
-      # Returns early while that offer waits for an answer.
+      # Makes its offers to the human first, so the human sees the cards before the
+      # bots share them out, then trades with the bots. Returns early while that
+      # offer waits for an answer; the runner calls it again once it is settled.
       def play_trade_phase(partner_indexes:, human_index: nil)
-        offer_unwanted_cards(partner_indexes)
-        offer_junk_hand(partner_indexes)
+        @human_index = human_index
         return if propose_to_human(human_index)
 
-        @game.end_trading
+        offer_unwanted_cards(partner_indexes)
+        offer_junk_hand(partner_indexes)
+        @game.end_trading if @game.offer.nil?
       end
 
       # Plants cards that already fit first, so any harvest frees the right field.
@@ -46,21 +56,55 @@ module BeanBazaar
       # where every offered bean would be planted, what it gives up, and how much
       # the asker gains. Junk gifts and one-sided swaps get turned down.
       def accepts?(offered:, requested:)
-        deal_value(offered, requested).positive?
+        value = deal_value(offered, requested)
+        requested.empty? ? value >= min_gift_value : value.positive?
       end
 
       # A smaller deal it would take instead: it drops whichever card helps it most,
-      # one at a time, until the deal comes out ahead. Nil when nothing is left.
+      # one at a time, until the deal comes out ahead. When the asker wanted beans it
+      # keeps at least one in, so a counter is never just "give me your card".
+      # Nil when no smaller deal works.
       def counter_offer(offered:, requested:)
-        until offered.empty? && requested.empty?
+        must_give = !requested.empty?
+        loop do
           options = offered.uniq.map { |card| [without_one(offered, card), requested] } +
             requested.uniq.map { |card| [offered, without_one(requested, card)] }
+          options.reject! { |option_offered, option_requested| (must_give && option_requested.empty?) || option_offered.empty? && option_requested.empty? }
+          return nil if options.empty?
+
           offered, requested = options.max_by { |option| deal_value(*option) }
           return { offered: offered, requested: requested } if accepts?(offered: offered, requested: requested)
         end
       end
 
       private
+
+      # Gifts go to the poorest player, the human included. Cards no bot wants stay
+      # with it rather than going to the human: in testing, that junk only clogged
+      # the human's fields. A gift to the human waits for an answer, so the giving
+      # stops until the human has replied.
+      def offer(partner_indexes, face_up_indexes: [], hand_indexes: [])
+        return false if @game.offer
+        return true if human_poorest?(partner_indexes) && gift_to_human(face_up_indexes, hand_indexes)
+
+        super
+      end
+
+      def human_poorest?(partner_indexes)
+        return false if @human_index.nil?
+
+        partner_indexes.all? { |index| @game.players[@human_index].coins <= @game.players[index].coins }
+      end
+
+      def gift_to_human(face_up_indexes, hand_indexes)
+        return false if @human_index.nil? || @game.offers_this_turn >= MAX_OFFERS_TO_HUMAN
+
+        gift = { partner_index: @human_index, face_up_indexes: face_up_indexes, hand_indexes: hand_indexes }
+        return false if @game.declined?(**gift)
+
+        @game.propose(**gift)
+        true
+      end
 
       def without_one(cards, card)
         cards.dup.tap { |rest| rest.delete_at(rest.index(card)) }
@@ -120,7 +164,32 @@ module BeanBazaar
       end
 
       def deal_value(offered, requested)
-        incoming_value(offered) - requested.sum { |card| keeping_value(card) } - (requested.size * HELP_COST)
+        incoming_value(offered) - requested.sum { |card| keeping_value(card) } - (requested.size * help_cost)
+      end
+
+      def min_gift_value
+        MIN_GIFT_VALUE
+      end
+
+      # The asker is always the active player; helping a leader costs more.
+      def help_cost
+        lead = @game.active_player.coins - player.coins
+        HELP_COST + lead.clamp(0, MAX_LEAD_COST)
+      end
+
+      # A flipped card that fits a free field is worth keeping: it must be planted
+      # anyway, and giving it away only helps a rival.
+      def unwanted_face_up_index
+        keep = keepable_new_bean
+        @game.face_up.cards.index { |card| !grows?(card) && card != keep }
+      end
+
+      # The one new bean it would start a field with, if a field is free for it.
+      def keepable_new_bean
+        free_fields = player.fields.count(&:empty?) - fields_wanted_by_hand([])
+        return nil if !free_fields.positive?
+
+        @game.face_up.cards.find { |card| !grows?(card) }
       end
 
       # Plants the offered beans in its head: beans that grow a field come first,
@@ -130,7 +199,7 @@ module BeanBazaar
       def incoming_value(cards)
         beans = cards.tally
         free_fields = player.fields.count(&:empty?) - fields_wanted_by_hand(cards)
-        spare_fields = player.fields.reject { |field| field.empty? || beans.key?(field.bean) }.sort_by { |field| uprooting_cost(field) }
+        spare_fields = uprootable_fields(beans)
         beans.sort_by { |bean, count| [grows?(bean) ? 0 : 1, -count] }.sum do |bean, count|
           next growing_value(bean, count) if grows?(bean)
           next new_field_value(bean, count) if (free_fields -= 1) >= 0
@@ -140,6 +209,14 @@ module BeanBazaar
 
           new_field_value(bean, count) - uprooting_cost(field)
         end
+      end
+
+      # The fields it could dig up for a new bean, in the order make_room would pick
+      # them, so the plan and the harvest agree.
+      def uprootable_fields(beans)
+        harvestable_indexes.map { |index| player.fields[index] }
+          .reject { |field| field.empty? || beans.key?(field.bean) }
+          .sort_by { |field| -harvest_score(field) }
       end
 
       def growing_value(bean, count)
@@ -176,22 +253,38 @@ module BeanBazaar
         -1
       end
 
-      # Gives the human a card it can't use and asks for the bean that brings its
-      # best field closest to the next coin. False when it has nothing to offer.
+      # Gives the human a card it can't use for any one of the beans it grows, or,
+      # once that was turned down, offers it as a gift. False when it has nothing
+      # new to offer.
       def propose_to_human(human_index)
-        return false if human_index.nil? || @game.offers_this_turn.positive?
+        return false if human_index.nil? || @game.offers_this_turn >= MAX_OFFERS_TO_HUMAN
 
-        face_up_index = @game.face_up.cards.index { |card| !grows?(card) }
-        hand_index = face_up_index.nil? ? junk_hand_index : nil
-        return false if face_up_index.nil? && hand_index.nil?
+        offer = offers_for_human(human_index).find { |candidate| !@game.declined?(**candidate) }
+        return false if offer.nil?
 
-        @game.propose(
-          partner_index: human_index,
-          face_up_indexes: Array(face_up_index),
-          hand_indexes: Array(hand_index),
-          partner_beans: Array(wanted_bean(human_index)),
-        )
+        @game.propose(**offer)
         true
+      end
+
+      # The swap, then the same cards as a gift.
+      def offers_for_human(human_index)
+        face_up_index = unwanted_face_up_index
+        hand_index = face_up_index.nil? ? junk_hand_index : nil
+        return [] if face_up_index.nil? && hand_index.nil?
+
+        cards = Array(face_up_index).map { |index| @game.face_up.cards[index] } + Array(hand_index).map { |index| player.hand.cards[index] }
+        choices = (wanted_beans(human_index) - turned_down_choices(human_index, cards)).first(MAX_CHOICES)
+        [choices, []].uniq.map do |offered_choices|
+          { partner_index: human_index, face_up_indexes: Array(face_up_index), hand_indexes: Array(hand_index), choices: offered_choices }
+        end
+      end
+
+      # Beans the human already refused to give for these same cards this turn.
+      def turned_down_choices(human_index, cards)
+        gives = cards.map(&:to_s).sort
+        @game.declined
+          .select { |record| record['partner_index'] == human_index && record['gives'] == gives }
+          .flat_map { |record| record.fetch('choices', []).map(&:to_sym) }
       end
 
       # The last hand card that fits none of its fields: the one it would plant latest.
@@ -199,11 +292,17 @@ module BeanBazaar
         player.hand.cards.rindex { |card| !fits?(card) }
       end
 
-      # Skips beans the human has already said they hold none of.
-      def wanted_bean(human_index)
-        growing = player.fields.reject { |field| field.empty? || @game.lacking[human_index].include?(field.bean) }
-        best = growing.min_by { |field| BeanType.find(field.bean).next_step(field.count).to_i - field.count }
-        best&.bean
+      def wanted_bean(partner_index)
+        wanted_beans(partner_index).first
+      end
+
+      # The beans it grows, the one closest to its next coin first, skipping beans
+      # the partner has already said they hold none of.
+      def wanted_beans(partner_index)
+        player.fields
+          .reject { |field| field.empty? || @game.lacking[partner_index].include?(field.bean) }
+          .each_with_index.sort_by { |field, index| [BeanType.find(field.bean).next_step(field.count).to_i - field.count, index] }
+          .map { |field, _index| field.bean }.uniq
       end
     end
   end

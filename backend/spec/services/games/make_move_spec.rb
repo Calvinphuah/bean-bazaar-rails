@@ -133,7 +133,7 @@ RSpec.describe Games::MakeMove do
   end
 
   describe "answering a smart bot's offer" do
-    # Pinto grows soy and blue, so it offers its useless face-up red for the blue it needs.
+    # Pinto grows soy and blue, so it offers its useless face-up red for either, blue first.
     let(:pinto) { player('Pinto', [], fields: [field(:soy, 2), field(:blue, 3)]) }
     let(:you) { player('You', %i[blue chili]) }
     let(:offered_engine) do
@@ -147,11 +147,11 @@ RSpec.describe Games::MakeMove do
     end
 
     it 'shows the waiting offer' do
-      expect(saved.offer).to include('partner_index' => 0, 'partner_beans' => %w[blue])
+      expect(saved.offer).to include('partner_index' => 0, 'choices' => %w[blue soy])
     end
 
-    it 'accepts the offer and lets the bots carry on' do
-      result = move('accept_offer')
+    it 'accepts the offer with the bean you pick and lets the bots carry on' do
+      result = move('accept_offer', bean: 'blue')
 
       expect(result).to include(success: true)
       expect(saved.offer).to be_nil

@@ -47,6 +47,36 @@ RSpec.describe BeanBazaar::Bots::SimpleBot do
       expect(game.phase).to eq(:plant_pending)
     end
 
+    it 'asks only for its own bean, so a partner holding another one just gets a gift' do
+      bot = player('Bot', [], fields: [BeanBazaar::Field.new(bean: :soy, count: 2), BeanBazaar::Field.new(bean: :blue, count: 2)])
+      partner = player('Partner', %i[blue])
+      game = BeanBazaar::Game.new(players: [bot, partner], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[green]))
+      described_class.new(game, 0).play_trade_phase(partner_indexes: [1])
+
+      expect(partner.hand.cards).to eq(%i[blue])
+      expect(partner.pending).to eq(%i[green])
+    end
+
+    it 'gifts when it grows nothing to ask for' do
+      partner = player('Partner', %i[soy])
+      game = BeanBazaar::Game.new(players: [player('Bot', []), partner], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[green]))
+      described_class.new(game, 0).play_trade_phase(partner_indexes: [1])
+
+      expect(partner.pending).to eq(%i[green])
+      expect(partner.hand.cards).to eq(%i[soy])
+    end
+
+    it 'offers the poorest partner first' do
+      bot = player('Bot', [], fields: [BeanBazaar::Field.new(bean: :soy, count: 2), BeanBazaar::Field.new(bean: :blue, count: 2)])
+      rich = player('Rich', [], coin_cards: %i[red])
+      poor = player('Poor', [])
+      game = BeanBazaar::Game.new(players: [bot, rich, poor], deck: deck, phase: :trade, face_up: BeanBazaar::Hand.new(%i[green]))
+      described_class.new(game, 0).play_trade_phase(partner_indexes: [1, 2])
+
+      expect(poor.pending).to eq(%i[green])
+      expect(rich.pending).to be_empty
+    end
+
     it 'keeps a card nobody wants' do
       bot = player('Bot', [], fields: [BeanBazaar::Field.new(bean: :soy, count: 2), BeanBazaar::Field.new(bean: :blue, count: 2)])
       partner = player('Partner', [], fields: [BeanBazaar::Field.new(bean: :red, count: 1), BeanBazaar::Field.new(bean: :wax, count: 1)])
