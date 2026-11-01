@@ -6,7 +6,8 @@ const SETTINGS_KEY = "bean-bazaar-sound"
 const SOUND_VOLUME = 0.45
 // Bots' moves are heard, but softer than your own.
 const BOT_VOLUME_SCALE = 0.5
-const MUSIC_VOLUME = 0.15
+// Background only: you should notice it when it stops, not while it plays.
+const MUSIC_VOLUME = 0.06
 const MUSIC_FADE_MS = 2500
 // A fast replay can fire the same sound in a burst; one per gap is enough.
 const MIN_GAP_MS = 140
@@ -26,9 +27,10 @@ interface Settings {
 function loadSettings(): Settings {
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<Settings>
-    return { music: saved.music ?? true, sound: saved.sound ?? true }
+    // Music starts off, so it never surprises anyone; the header button turns it on.
+    return { music: saved.music ?? false, sound: saved.sound ?? true }
   } catch {
-    return { music: true, sound: true }
+    return { music: false, sound: true }
   }
 }
 
