@@ -190,7 +190,8 @@ const ANSWER_LABELS: Record<QuoteAnswer, string> = {
 
 .fields { display: flex; gap: 6px; }
 .field { position: relative; width: 42px; height: 58px; border-radius: 6px; display: grid; place-items: center; }
-.field.empty { border: 2px dashed rgba(255, 246, 220, .35); }
+/* An empty field is just a patch of table, so a quiet table doesn't look busy. */
+.field.empty { background: rgba(30, 14, 4, .18); box-shadow: inset 0 0 0 1px rgba(255, 246, 220, .12); }
 .badge {
   position: absolute;
   top: -6px;

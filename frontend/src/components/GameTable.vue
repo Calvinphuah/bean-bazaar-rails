@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, toRef, watch } from "vue"
 import BeanCard from "./BeanCard.vue"
+import BrandMark from "./BrandMark.vue"
 import BeanField from "./BeanField.vue"
 import BotSeat from "./BotSeat.vue"
 import GameLog from "./GameLog.vue"
@@ -166,33 +167,33 @@ const youWon = computed(() => props.game.winners.includes(you.value))
 <template>
   <div class="game">
     <header class="topbar">
-      <span class="logo">Bean Bazaar</span>
+      <BrandMark size="small" />
       <PhaseTracker
         :phase="table.phase"
         :turn-label="turnLabel"
       />
       <div class="tools">
         <button
-          class="small secondary"
+          class="tool"
           @click="emit('tutorial')"
         >
           How to play
         </button>
         <button
-          class="small secondary"
+          class="tool"
           @click="showPayouts = true"
         >
           Payouts
         </button>
         <button
-          class="small secondary"
+          class="tool"
           :aria-pressed="showLog"
           @click="showLog = !showLog"
         >
           Log
         </button>
         <button
-          class="small secondary"
+          class="tool"
           @click="emit('leave')"
         >
           New game
@@ -514,9 +515,12 @@ const youWon = computed(() => props.game.winners.includes(you.value))
 .game { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(520px, 1fr) auto; overflow: clip; }
 
 .topbar { position: relative; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 20px; }
-.logo { font-family: "Fraunces", serif; font-weight: 900; font-size: 24px; color: #fff6dc; text-shadow: 0 2px 0 rgba(0, 0, 0, .35); }
-.tools { display: flex; gap: 6px; }
-.tools button { background: rgba(255, 246, 220, .85); }
+.tools { display: flex; gap: 2px; }
+/* Menu items, not game actions: plain text so the phase tracker leads the bar. */
+.tool { background: none; border: 0; box-shadow: none; padding: 6px 10px; border-radius: 8px; color: #fff6dc; font-size: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, .45); }
+.tool:hover { background: rgba(30, 14, 4, .25); }
+.tool[aria-pressed="true"] { background: rgba(30, 14, 4, .35); }
+.tool:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 
 .felt { position: relative; }
 .felt :deep(.seat) { position: absolute; z-index: 2; }

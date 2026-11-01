@@ -142,8 +142,8 @@ const deckStyle = computed(() => {
 .pile { display: grid; justify-items: center; gap: 22px; }
 .label { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
 .pile-cards { position: relative; width: 92px; aspect-ratio: 63 / 88; }
-/* An empty pile leaves a faint outline where the cards were. */
-.pile-cards.empty { border-radius: 9px; border: 2px dashed rgba(255, 246, 220, .35); }
+/* An empty pile leaves a faint patch where the cards were. */
+.pile-cards.empty { border-radius: 9px; background: rgba(30, 14, 4, .18); box-shadow: inset 0 0 0 1px rgba(255, 246, 220, .12); }
 .back { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; border: 2px solid #fff; }
 .tossed { position: absolute; inset: 0; }
 .count {

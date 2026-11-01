@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
+import BrandMark from "./BrandMark.vue"
 import type { BotLevel } from "../types"
 
 defineProps<{ busy: boolean }>()
@@ -30,18 +31,20 @@ const LEVELS: { level: BotLevel; label: string; hint: string }[] = [
     </div>
 
     <div class="panel intro">
-      <h1>Bean Bazaar</h1>
+      <h1 class="title">
+        <BrandMark size="medium" />
+      </h1>
       <p class="tagline">
         Plant beans, haggle at the table, and harvest your way to the most coins.
       </p>
 
       <div class="option">
         <span class="label">Opponents</span>
-        <div class="choices">
+        <div class="segments">
           <button
             v-for="count in [2, 3, 4]"
             :key="count"
-            :class="count === botCount ? '' : 'secondary'"
+            class="segment"
             :aria-pressed="count === botCount"
             @click="botCount = count"
           >
@@ -52,11 +55,11 @@ const LEVELS: { level: BotLevel; label: string; hint: string }[] = [
 
       <div class="option">
         <span class="label">Bots</span>
-        <div class="choices">
+        <div class="segments">
           <button
             v-for="choice in LEVELS"
             :key="choice.level"
-            :class="choice.level === botLevel ? '' : 'secondary'"
+            class="segment"
             :aria-pressed="choice.level === botLevel"
             @click="botLevel = choice.level"
           >
@@ -107,11 +110,18 @@ const LEVELS: { level: BotLevel; label: string; hint: string }[] = [
 @keyframes deal { from { opacity: 0; translate: 0 60px; } }
 
 .intro { width: min(480px, 100%); display: grid; gap: 16px; padding: 26px; }
-h1 { font-size: 44px; color: var(--ink); }
+.title { margin-bottom: 4px; }
 .tagline { margin: -6px 0 0; font-size: 16px; line-height: 1.5; }
 .option { display: grid; gap: 8px; }
 .label { font-weight: 800; font-size: 14px; }
-.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+/* One control per choice, so only the picked option looks pressed. */
+.segments { justify-self: start; display: flex; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; box-shadow: 0 2px 0 var(--ink); }
+.segment { border: 0; border-radius: 0; box-shadow: none; padding: 6px 14px; background: var(--panel); }
+.segment + .segment { border-left: 2px solid var(--ink); }
+.segment[aria-pressed="true"] { background: var(--gold); }
+.segment:hover:not(:disabled), .segment:active:not(:disabled) { transform: none; }
+.segment:hover:not([aria-pressed="true"]) { background: var(--panel-dark); }
+.segment:focus-visible { outline: 3px solid var(--accent); outline-offset: -5px; }
 .hint { font-size: 13px; color: var(--muted); }
 .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
 </style>

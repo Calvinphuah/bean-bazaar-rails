@@ -4,6 +4,12 @@ import type { BeanKey, GameState, Move, TradeGive } from "./types"
 
 const QUOTE_DELAY_MS = 250
 
+// "Pinto", "Pinto and Lima", "Pinto, Lima and Fava".
+function listNames(names: string[]): string {
+  if (names.length < 2) return names.join("")
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+}
+
 // The offer you are building on your trade turn, with each bot's live answer,
 // in the style of Colonist: pick what you give and get, bots answer on their seats.
 export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, move: (next: Move) => Promise<boolean>) {
@@ -39,7 +45,7 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, m
     const all = Object.values(answers.value)
     if (all.length && all.every((answer) => answer === "missing")) return "Nobody has those beans right now."
     if (!acceptors.value.length) return "No one wants this deal. Try changing it."
-    const names = acceptors.value.map((player) => game.value?.players[player]?.name).join(" and ")
+    const names = listNames(acceptors.value.map((player) => game.value?.players[player]?.name ?? ""))
     return `${names} will trade. Press Trade on their seat.`
   })
 
