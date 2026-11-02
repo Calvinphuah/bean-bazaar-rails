@@ -1,0 +1,41 @@
+# Omakase Ruby styling for Rails
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+plugins:
+  - rubocop-rails
+  - rubocop-performance
+
+AllCops:
+  NewCops: enable
+  Exclude:
+    - "db/schema.rb"
+    - "db/migrate/**/*"
+    - "bin/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+
+# Omakase asks for double quotes, `[ a ]` and no trailing commas. The tree uses
+# single quotes, `[a]` and trailing commas in multi-line literals.
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+  Include:
+    - "app/**/*"
+    - "config/**/*"
+    - "lib/**/*"
+    - "spec/**/*"
+    - "db/**/*"
+    - "Gemfile"
+
+Layout/SpaceInsideArrayLiteralBrackets:
+  EnforcedStyle: no_space
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
+# Every method is `def … end`; no one-line endless methods.
+Style/EndlessMethod:
+  Enabled: true
+  EnforcedStyle: disallow

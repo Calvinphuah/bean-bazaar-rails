@@ -1,0 +1,40 @@
+module BeanBazaar
+  module Bots
+    # Plays like SmartBot but trades more kindly, so a good player wins more often than at Smart.
+    class NormalBot < SmartBot
+      # Any gift that does it some good is welcome.
+      KIND_GIFT_VALUE = 1
+      # Deals among bots make them strong: with four a turn a good player wins about 40% of games.
+      MAX_BOT_DEALS = 4
+
+      private
+
+      # Once it has made its deals this turn, spare cards go to the human instead.
+      def offer(partner_indexes, face_up_indexes: [], hand_indexes: [])
+        return super if deals_this_turn < MAX_BOT_DEALS
+
+        # Only one offer can wait at a time; the giving stops until the human answers.
+        @game.offer.nil? && gift_to_human(face_up_indexes, hand_indexes)
+      end
+
+      # Trades made since its turn began, read from the log.
+      def deals_this_turn
+        types = @game.log.reverse.map { |event| event_type(event) }
+        types.take_while { |type| type != 'turn' }.count('trade')
+      end
+
+      # Saved log entries have string keys and fresh ones symbol keys.
+      def event_type(event)
+        (event[:type] || event['type']).to_s
+      end
+
+      def min_gift_value
+        KIND_GIFT_VALUE - personality.gift_kindness
+      end
+
+      def help_cost
+        HELP_COST
+      end
+    end
+  end
+end
