@@ -209,6 +209,8 @@ const standings = computed(() =>
       handSize: player.hand_size,
       place: 1 + props.game.players.filter((other) => ahead(other, player)).length,
       winner: props.game.winners.includes(index),
+      // Same coins as someone placed above, who kept more cards in hand.
+      lostOnCards: props.game.players.some((other) => other.coins === player.coins && other.hand_size > player.hand_size),
       avatar: index === you.value ? null : avatarOf(index),
       finalHarvest: finalHarvest.value[index] ?? 0,
     }))
@@ -631,6 +633,7 @@ function ordinal(place: number): string {
               <span class="who">
                 {{ entry.name }}
                 <small v-if="entry.winner && wonOnCards">Won the tie with {{ entry.handSize }} cards in hand</small>
+                <small v-else-if="entry.lostOnCards">Lost a coin tie: fewer cards in hand</small>
                 <small v-else-if="entry.finalHarvest">+{{ coinText(entry.finalHarvest) }} in the final harvest</small>
               </span>
               <span class="score">{{ coinText(entry.coins) }}</span>
