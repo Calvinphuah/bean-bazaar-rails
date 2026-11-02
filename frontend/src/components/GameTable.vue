@@ -249,6 +249,9 @@ const resultLine = computed(() => {
   if (!mine) return ""
   const best = standings.value[0]?.coins ?? 0
   const runnerUp = standings.value.find((entry) => !entry.winner)?.coins ?? best
+  if (youWon.value && winnerNames.value.length > 1) {
+    return `Tied for first with ${winnerNames.value.filter((name) => name !== mine.name).join(" and ")}.`
+  }
   if (youWon.value) return best > runnerUp ? `${coinText(best - runnerUp)} ahead of 2nd place.` : "Nobody could catch you."
   return `You came ${ordinal(mine.place)}, ${coinText(best - mine.coins)} behind.`
 })
