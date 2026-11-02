@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { onBeforeUnmount, ref, watch } from "vue"
 import type { BeanKey, BeanType, LogEvent } from "../types"
 
 const props = defineProps<{
@@ -25,6 +25,17 @@ const CARD_STAGGER_MS = 120
 
 const flyers = ref<Flyer[]>([])
 let nextId = 0
+const timers = new Set<ReturnType<typeof setTimeout>>()
+
+function later(run: () => void, delay: number): void {
+  const timer = setTimeout(() => {
+    timers.delete(timer)
+    run()
+  }, delay)
+  timers.add(timer)
+}
+
+onBeforeUnmount(() => timers.forEach(clearTimeout))
 
 // Plates and fields mark themselves with data-anchor="plate-2" and so on.
 function anchor(part: "plate" | "fields", player: number): DOMRect | null {
@@ -36,7 +47,7 @@ function launch(src: string, kind: Flyer["kind"], from: DOMRect | null, to: DOMR
   const added = Array.from({ length: count }, (_, index) => ({ id: nextId++, src, kind, style: flightPath(kind, from, to, index * stagger) }))
   flyers.value = [...flyers.value, ...added]
   const done = new Set(added.map((flyer) => flyer.id))
-  setTimeout(() => { flyers.value = flyers.value.filter((flyer) => !done.has(flyer.id)) }, FLIGHT_MS + count * stagger + 100)
+  later(() => { flyers.value = flyers.value.filter((flyer) => !done.has(flyer.id)) }, FLIGHT_MS + count * stagger + 100)
 }
 
 // "Pinto harvested 5 Blue for 2 coins" and "Lima earned 3 coins in the final harvest".
@@ -63,7 +74,7 @@ function trade(text: string): void {
 function fly(beanNames: string, from: DOMRect | null, to: DOMRect | null): void {
   beanNames.split(" and ").forEach((name, index) => {
     const key = beanKey(name)
-    if (key) setTimeout(() => launch(`/cards/${key}-240.webp`, "card", from, to, 1, 0), index * CARD_STAGGER_MS)
+    if (key) later(() => launch(`/cards/${key}-240.webp`, "card", from, to, 1, 0), index * CARD_STAGGER_MS)
   })
 }
 

@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from "vue"
+import { computed, onBeforeUnmount, ref, watch, type Ref } from "vue"
 import { quoteTrade, type QuoteAnswer, type TradeCounter } from "./api"
 import type { BeanKey, GameState, Move, TradeGive } from "./types"
 
@@ -173,6 +173,12 @@ export function useTrade(game: Ref<GameState | null>, isTrading: Ref<boolean>, i
     if (quoteTimer) clearTimeout(quoteTimer)
     quoting.value = hasOffer.value && isTrading.value
     quoteTimer = setTimeout(refreshQuote, QUOTE_DELAY_MS)
+  })
+
+  // A quote still on its way when the table closes is dropped.
+  onBeforeUnmount(() => {
+    if (quoteTimer) clearTimeout(quoteTimer)
+    quoteRequest += 1
   })
 
   // Cards move after every trade, so old picks would point at the wrong cards.
