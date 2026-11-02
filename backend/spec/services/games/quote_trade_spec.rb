@@ -89,6 +89,6 @@ RSpec.describe Games::QuoteTrade do
   it 'falls back to a general alert for anything unexpected' do
     allow(game).to receive(:engine).and_raise(ActiveRecord::RecordInvalid.new(game))
 
-    expect(described_class.new(game, {}).call[:extra_params][:alert]).to eq("The move couldn't be saved, please try again")
+    expect(described_class.new(game, {}).call[:extra_params][:alert]).to eq("The bots couldn't answer, please try again")
   end
 end

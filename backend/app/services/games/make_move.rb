@@ -1,4 +1,6 @@
 class Games::MakeMove < ApplicationService
+  include GameMoveShared
+
   # @param game [Game] the game to play the move in
   # @param move_params [ActionController::Parameters / Hash] the human's move: type plus its fields
   def initialize(game, move_params)
@@ -113,13 +115,11 @@ class Games::MakeMove < ApplicationService
 
   # Your hand cards for the active bot's face-up cards and the beans you ask it for.
   def bid
-    bot_index = @engine.active_index
-    gives = picked_cards(@engine.players[human_index].hand, :hand_indexes)
-    gets = picked_cards(@engine.face_up, :face_up_indexes) + Array(@move_params[:partner_beans]).map(&:to_sym)
-    bot = @game.bot_runner(@engine).bot(bot_index)
+    gives, gets = bid_cards
+    bot = @game.bot_runner(@engine).bot(@engine.active_index)
     illegal!('turned_down', name: @engine.active_player.name) if !bot.accepts?(offered: gives, requested: gets)
 
-    @engine.bid(face_up_indexes: numbers(:face_up_indexes), active_beans: Array(@move_params[:partner_beans]), bidder_hand_indexes: numbers(:hand_indexes))
+    @engine.bid(face_up_indexes: numbers(:face_up_indexes), active_beans: asked_beans, bidder_hand_indexes: numbers(:hand_indexes))
   end
 
   def plant_pending
@@ -152,36 +152,21 @@ class Games::MakeMove < ApplicationService
   end
 
   def check_bot_accepts(partner, partner_hand_indexes)
-    offered = picked_cards(@engine.face_up, :face_up_indexes) + picked_cards(@engine.active_player.hand, :hand_indexes)
     requested = partner_hand_indexes.map { |index| partner.hand.cards[index] }
     bot = @game.bot_runner(@engine).bot(@engine.players.index(partner))
-    return if bot.accepts?(offered: offered, requested: requested)
+    return if bot.accepts?(offered: offered_cards, requested: requested)
 
     illegal!('turned_down', name: partner.name)
-  end
-
-  # @param row [BeanBazaar::Hand] face-up cards or a hand
-  # @param key [Symbol] the move field holding the picked indexes
-  # @return [Array<Symbol>] the picked cards
-  def picked_cards(row, key)
-    indexes = numbers(key)
-    row.check!(indexes)
-    indexes.map { |index| row.cards[index] }
   end
 
   # The human can't see a bot's hand, so they ask for bean types, as at a real table.
   # @return [Array<Integer>] hand positions of the asked-for beans
   def partner_hand_indexes_for(partner)
-    beans = Array(@move_params[:partner_beans])
-    partner.hand.indexes_of(beans) || illegal!('no_bean_to_give', name: partner.name)
+    partner.hand.indexes_of(asked_beans) || illegal!('no_bean_to_give', name: partner.name)
   end
 
   def move_type
     @move_params[:type].to_s
-  end
-
-  def human_index
-    @game.human_index
   end
 
   def number(key)
@@ -190,23 +175,12 @@ class Games::MakeMove < ApplicationService
     illegal!('not_a_number', key: key)
   end
 
-  def numbers(key)
-    Array(@move_params[key]).map { |value| Integer(value) }
-  rescue ArgumentError, TypeError
-    illegal!('not_a_list', key: key)
+  def picks_params
+    @move_params
   end
 
-  # @param message_key [String] key under game.service_messages.make_move
-  # @raise [BeanBazaar::IllegalMove] rolled back by safe_transaction and shown as the alert
-  def illegal!(message_key, **options)
-    raise BeanBazaar::IllegalMove, I18n.t("game.service_messages.make_move.#{message_key}", **options)
-  end
-
-  # rule breaks explain themselves; anything else gets the general message
-  def error_message
-    return @exception.message if @exception.is_a?(BeanBazaar::IllegalMove)
-
-    I18n.t('game.service_messages.make_move.error_default')
+  def message_group
+    'make_move'
   end
 
   def root_name

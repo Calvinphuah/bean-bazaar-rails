@@ -24,11 +24,11 @@ module BeanBazaar
       @bot_class.new(@game, player_index)
     end
 
-    private
-
     def bot_indexes
       @game.players.each_index.reject { |index| index == @human_index }
     end
+
+    private
 
     def waiting_for_human?
       return false if @human_index.nil?

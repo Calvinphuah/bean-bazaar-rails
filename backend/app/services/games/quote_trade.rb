@@ -1,4 +1,6 @@
 class Games::QuoteTrade < ApplicationService
+  include GameMoveShared
+
   # @param game [Game] the game the human is trading in
   # @param quote_params [ActionController::Parameters / Hash] face_up_indexes, hand_indexes, partner_beans
   def initialize(game, quote_params)
@@ -46,11 +48,10 @@ class Games::QuoteTrade < ApplicationService
   def collect_answers
     return collect_bid_answer if bidding?
 
-    offered = picked_cards(@engine.face_up, :face_up_indexes) + picked_cards(@engine.active_player.hand, :hand_indexes)
     runner = @game.bot_runner(@engine)
 
-    @answers = bot_indexes.map do |index|
-      { player: index }.merge(answer_for(runner.bot(index), @engine.players[index], offered))
+    @answers = runner.bot_indexes.map do |index|
+      { player: index }.merge(answer_for(runner.bot(index), @engine.players[index], offered_cards))
     end
   end
 
@@ -63,8 +64,7 @@ class Games::QuoteTrade < ApplicationService
   def bid_answer
     return 'missing' if @engine.active_player.hand.indexes_of(asked_beans).nil?
 
-    offered = picked_cards(@engine.players[human_index].hand, :hand_indexes)
-    requested = picked_cards(@engine.face_up, :face_up_indexes) + asked_beans.map(&:to_sym)
+    offered, requested = bid_cards
     @game.bot_runner(@engine).bot(@engine.active_index).accepts?(offered: offered, requested: requested) ? 'accept' : 'decline'
   end
 
@@ -81,38 +81,12 @@ class Games::QuoteTrade < ApplicationService
     { answer: 'decline', counter: { give: counter[:offered].map(&:to_s), ask: counter[:requested].map(&:to_s) } }
   end
 
-  def bot_indexes
-    @engine.players.each_index.reject { |index| index == human_index }
+  def picks_params
+    @quote_params
   end
 
-  def asked_beans
-    Array(@quote_params[:partner_beans])
-  end
-
-  # @param row [BeanBazaar::Hand] face-up cards or the human's hand
-  # @param key [Symbol] the param holding the picked indexes
-  # @return [Array<Symbol>] the picked cards
-  def picked_cards(row, key)
-    indexes = Array(@quote_params[key]).map { |value| Integer(value) }
-    row.check!(indexes)
-    indexes.map { |index| row.cards[index] }
-  rescue ArgumentError, TypeError
-    illegal!('not_a_list', key: key)
-  end
-
-  def human_index
-    @game.human_index
-  end
-
-  # @raise [BeanBazaar::IllegalMove] rolled back by safe_transaction and shown as the alert
-  def illegal!(message_key, **options)
-    raise BeanBazaar::IllegalMove, I18n.t("game.service_messages.make_move.#{message_key}", **options)
-  end
-
-  def error_message
-    return @exception.message if @exception.is_a?(BeanBazaar::IllegalMove)
-
-    I18n.t('game.service_messages.make_move.error_default')
+  def message_group
+    'quote_trade'
   end
 
   def root_name
