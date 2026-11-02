@@ -1,8 +1,6 @@
 module BeanBazaar
   module Bots
-    # Plays to win. It reads its own hand order, cashes fields at payout steps
-    # instead of harvesting them for nothing, values cards by how close they bring a
-    # field to its next coin, and trades with the human as well as the other bots.
+    # Plays to win: plans around its hand order and values cards by coins they bring closer.
     class SmartBot < SimpleBot
       # How many cards past the front of the hand it plans around.
       LOOKAHEAD = 3
@@ -17,9 +15,7 @@ module BeanBazaar
       MAX_LEAD_COST = 3
       # A gift fills a field, so it must be worth more than one lonely bean.
       MIN_GIFT_VALUE = 2
-      # On its turn the human gets this many offers, never the same one twice. With
-      # three, a player who trades like a bot wins as often from the human's seat
-      # as from a bot's; with two, the bots' deals among themselves win out.
+      # With three offers a turn the human's seat wins as often as a bot's; with two it falls behind.
       MAX_OFFERS_TO_HUMAN = 3
       # A swap lists up to this many beans it would take, so the human can pick one they hold.
       MAX_CHOICES = 3
@@ -36,9 +32,7 @@ module BeanBazaar
         @game.flip_cards if @game.phase == :plant
       end
 
-      # Makes its offers to the human first, so the human sees the cards before the
-      # bots share them out, then trades with the bots. Returns early while that
-      # offer waits for an answer; the runner calls it again once it is settled.
+      # The human sees the cards before the bots share them out; the runner calls back once they answer.
       def play_trade_phase(partner_indexes:, human_index: nil)
         @human_index = human_index
         return if propose_to_human(human_index)
@@ -83,10 +77,7 @@ module BeanBazaar
 
       private
 
-      # Gifts go to the poorest player, the human included. Cards no bot wants stay
-      # with it rather than going to the human: in testing, that junk only clogged
-      # the human's fields. A gift to the human waits for an answer, so the giving
-      # stops until the human has replied.
+      # Gifts go to the poorest player, the human included; junk no bot wants clogged the human's fields.
       def offer(partner_indexes, face_up_indexes: [], hand_indexes: [])
         return false if @game.offer
         return true if human_poorest?(partner_indexes) && gift_to_human(face_up_indexes, hand_indexes)
