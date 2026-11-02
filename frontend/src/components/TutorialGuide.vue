@@ -8,32 +8,37 @@ const STEPS = [
   {
     target: "hand",
     title: "Your hand",
-    body: "You must plant the front card (marked Plant next) every turn. Drag it onto a field or press Plant here. You can never reorder your hand, so plan ahead.",
+    body: "Every turn you must plant the front card (marked Plant next). Drag it onto a field or press Plant here. You may plant the next card too. You can never reorder your hand, so plan ahead.",
   },
   {
     target: "fields",
     title: "Your fields",
-    body: "Each field grows one bean type. Plant the same bean again to make the pile bigger. A third field costs 3 coins.",
+    body: "Each field grows one bean type. Plant the same bean again to make the pile bigger. A third field costs 3 coins. Made a mistake? Undo takes back your last plant, harvest or field.",
   },
   {
     target: "fields",
     title: "Harvest for coins",
-    body: "Harvest a field to earn coins: the bigger the pile, the more coins. Each field shows how many more beans its next coin needs.",
+    body: "Harvest a field to earn coins: the bigger the pile, the more coins. You can't harvest a field with just 1 bean while another field has more, so plant carefully.",
   },
   {
     target: "deck",
     title: "Flip, then trade",
-    body: "After planting, flip 2 cards from the deck. You can trade them, or cards from your hand, with the bots. Anything you get must be planted right away.",
+    body: "After planting, flip 2 cards from the deck. Trade them, or cards from your hand, with the bots. Flipped cards nobody takes stay with you, and everything you keep or get must be planted.",
   },
   {
     target: "seats",
     title: "Bots answer instantly",
-    body: "On your trade turn, click cards to give and beans you want. Every bot answers on its seat: Deal!, No thanks, or Don't have it. A Smart bot that says no may suggest a smaller deal instead.",
+    body: "On your turn, click cards to give and beans you want. Every bot answers on its seat: Deal!, No thanks, or Don't have it. A bot that says no may suggest a different deal you can take.",
+  },
+  {
+    target: "seats",
+    title: "Deals on bot turns",
+    body: "Bots offer you deals on their turns too. Some let you pick which bean to give. Don't like it? Press Make my own offer to ask for what you want instead.",
   },
   {
     target: "seasons",
     title: "Win the bazaar",
-    body: "Each time the deck runs out, a new season starts. When the third season's deck runs out the game ends, and whoever has the most coins wins. Good luck!",
+    body: "Each time the deck runs out, a new season starts. When the third season's deck runs out the game ends, and whoever has the most coins wins. Easy bots are kind, Smart bots play to win. Good luck!",
   },
 ]
 
