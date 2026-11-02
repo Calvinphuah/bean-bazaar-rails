@@ -817,7 +817,6 @@ function ordinal(place: number): string {
 .spinner { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--panel-dark); border-top-color: var(--accent); animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .buttons { display: flex; gap: 8px; }
-button.big { font-size: 17px; padding: 9px 22px; }
 .pending { width: 430px; display: grid; gap: 8px; padding: 12px 14px; box-shadow: 0 0 0 4px var(--gold), 0 10px 24px rgba(0, 0, 0, .4); }
 .pending-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .pending-head strong { font-family: "Fraunces", serif; font-size: 17px; }

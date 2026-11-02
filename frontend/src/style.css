@@ -53,6 +53,7 @@ button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button.secondary { background: var(--panel); }
 button.small { padding: 3px 10px; font-size: 13px; }
+button.big { font-size: 17px; padding: 9px 22px; }
 /* Fingers need bigger targets than a mouse pointer. */
 @media (pointer: coarse) { button.small { padding: 8px 14px; } }
 
