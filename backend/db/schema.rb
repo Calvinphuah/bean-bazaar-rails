@@ -19,7 +19,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_040000) do
     t.integer "human_index", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "bot_level", default: "smart", null: false
+    t.string "bot_level", default: "normal", null: false
     t.jsonb "undo_states", default: [], null: false
   end
 end
