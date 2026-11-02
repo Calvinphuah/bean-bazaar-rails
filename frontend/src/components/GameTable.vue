@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRef, watch } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue"
 import BeanCard from "./BeanCard.vue"
 import BrandMark from "./BrandMark.vue"
 import BeanField from "./BeanField.vue"
@@ -28,6 +28,22 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ leave: []; skip: []; tutorialDone: []; tutorial: []; toggleSound: [] }>()
+
+// The table is laid out for this size; a smaller window gets the whole table
+// scaled down to fit, never a squashed layout.
+const TABLE_WIDTH = 1200
+const TABLE_HEIGHT = 820
+const scale = ref(1)
+
+function fitTable(): void {
+  scale.value = Math.min(1, window.innerWidth / TABLE_WIDTH, window.innerHeight / TABLE_HEIGHT)
+}
+
+onMounted(() => {
+  fitTable()
+  window.addEventListener("resize", fitTable)
+})
+onBeforeUnmount(() => window.removeEventListener("resize", fitTable))
 
 // Seat spots around the table, clockwise from your left, by number of bots.
 const SEAT_SPOTS: Record<number, string[]> = {
@@ -245,7 +261,10 @@ function ordinal(place: number): string {
 </script>
 
 <template>
-  <div class="game">
+  <div
+    class="game"
+    :style="{ zoom: scale }"
+  >
     <header class="topbar">
       <BrandMark size="small" />
       <PhaseTracker
@@ -665,6 +684,21 @@ function ordinal(place: number): string {
         @close="emit('tutorialDone')"
       />
     </Teleport>
+
+    <!-- The table needs a wide screen; an upright phone is asked to turn. -->
+    <Teleport to="body">
+      <div
+        class="turn-phone"
+        role="status"
+      >
+        <span
+          class="turn-icon"
+          aria-hidden="true"
+        >📱</span>
+        <strong>Turn your phone sideways</strong>
+        <p>The bazaar needs a wide table.</p>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -673,9 +707,27 @@ function ordinal(place: number): string {
    your farm and hand along the bottom, with the hand running off the edge. */
 /* Pinned to the window: a game table never scrolls. */
 .game { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(520px, 1fr) auto; overflow: clip; }
-/* A small window gets the whole table a step smaller, not a squashed layout. */
-@media (max-height: 820px), (max-width: 1180px) { .game { zoom: .86; } }
-@media (max-height: 700px), (max-width: 1020px) { .game { zoom: .76; } }
+
+.turn-phone { display: none; }
+@media (orientation: portrait) and (max-width: 600px) {
+  .turn-phone {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 8px;
+    padding: 24px;
+    text-align: center;
+    background: linear-gradient(#a8653a, #8c4f2b);
+    color: #fff6dc;
+  }
+  .turn-phone strong { font-family: "Fraunces", serif; font-size: 24px; }
+  .turn-phone p { margin: 0; font-size: 15px; }
+  .turn-icon { font-size: 56px; animation: turn 2.4s ease-in-out infinite; }
+}
+@keyframes turn { 30%, 70% { transform: rotate(-90deg); } }
 
 .topbar { position: relative; z-index: 15; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 10px 20px; }
 .tools { justify-self: end; display: flex; gap: 2px; white-space: nowrap; }
