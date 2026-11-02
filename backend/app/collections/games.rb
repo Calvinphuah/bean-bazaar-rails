@@ -6,8 +6,8 @@ class Games
   BOT_COUNTS = 2..4
   DEFAULT_BOT_COUNT = 3
 
-  # Bot seat names, in seating order.
-  BOT_NAMES = %w[Pinto Lima Fava Mung].freeze
+  # Bot seat names, in seating order: one per personality, so each seat plays its own way.
+  BOT_NAMES = BeanBazaar::Bots::Personality::ALL.keys.freeze
 
   # Bot difficulty, mapped to the bot class that plays it.
   BOT_LEVELS = {
