@@ -12,6 +12,16 @@ export interface Quote {
   answers: { player: number; answer: QuoteAnswer; counter?: TradeCounter }[]
 }
 
+// Keeps the HTTP status, so a missing game can be told apart from a network blip.
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 // Every response is wrapped in a root key (`game`, `quote`), success or error.
 async function request<T>(path: string, root: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -20,7 +30,7 @@ async function request<T>(path: string, root: string, init: RequestInit = {}): P
   })
   const body: unknown = await response.json().catch(() => null)
   const payload = typeof body === "object" && body !== null && root in body ? (body as Record<string, unknown>)[root] : null
-  if (!response.ok) throw new Error(errorMessage(payload, response.status))
+  if (!response.ok) throw new ApiError(errorMessage(payload, response.status), response.status)
 
   // The API is the only producer of these shapes; trust it at this one boundary.
   return payload as T

@@ -1,5 +1,5 @@
 import { computed, ref } from "vue"
-import { loadGame, sendMove, startGame } from "./api"
+import { ApiError, loadGame, sendMove, startGame } from "./api"
 import { tableOf } from "./rules"
 import type { BotLevel, GameState, LogEvent, Move, TableSnapshot } from "./types"
 
@@ -106,13 +106,18 @@ export function useGame() {
     return run(() => sendMove(current.id, next), true)
   }
 
+  // Only a game the server no longer has is forgotten; a network blip keeps it for next time.
   async function resume(): Promise<void> {
     const id = savedId()
     if (id === null) return
-    const loaded = await run(() => loadGame(id), false)
-    if (!loaded) {
-      saveId(null)
-      error.value = null
+    busy.value = true
+    try {
+      absorb(await loadGame(id), false)
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 404) saveId(null)
+      else error.value = caught instanceof Error ? caught.message : String(caught)
+    } finally {
+      busy.value = false
     }
   }
 
