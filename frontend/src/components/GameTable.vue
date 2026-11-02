@@ -12,7 +12,7 @@ import TableCenter from "./TableCenter.vue"
 import TableEffects from "./TableEffects.vue"
 import TradeBar from "./TradeBar.vue"
 import TutorialGuide from "./TutorialGuide.vue"
-import { MAX_FIELDS, MAX_HAND_PLANTS, THIRD_FIELD_PRICE, accepts, canHarvest, coinText } from "../rules"
+import { MAX_FIELDS, MAX_HAND_PLANTS, THIRD_FIELD_PRICE, accepts, addressYou, canHarvest, coinText } from "../rules"
 import { useRollingNumber } from "../useRollingNumber"
 import { useTrade } from "../useTrade"
 import type { BeanKey, BeanType, FieldState, GameState, LogEvent, Move, PlayerState, TableSnapshot } from "../types"
@@ -137,7 +137,10 @@ function beanName(bean: BeanKey): string {
 const instruction = computed(() => {
   // The traded-beans panel gives its own instructions, even mid-replay.
   if (pendingCard.value) return ""
-  if (props.replaying) return `${nameOf(props.replaying.player) || "The table"} is playing...`
+  if (props.replaying) {
+    if (props.replaying.player === you.value) return "Playing your move..."
+    return `${nameOf(props.replaying.player) || "The table"} is playing...`
+  }
   if (props.game.over) return ""
   if (offer.value) return `${nameOf(offer.value.from)} is offering you a deal.`
   if (isBidding.value) return `Make ${nameOf(props.game.active_index)} an offer for its cards, then press Done.`
@@ -149,7 +152,7 @@ const instruction = computed(() => {
     return `Drag your ${beanName(card)} onto a field, or press Plant here.`
   }
   if (props.game.phase === "plant") return "Plant your next card too, or flip 2 cards to start trading."
-  return "Make an offer, or press Done trading."
+  return "Trade the flipped cards, or press Done trading to keep them. You plant what you keep."
 })
 
 // A replayed move, minus the bot's own name, for its speech bubble.
@@ -158,7 +161,7 @@ function bubbleFor(index: number): string | null {
   if (!event || event.player !== index || event.type === "turn") return null
   const name = nameOf(index)
   const text = event.text.startsWith(`${name} `) ? event.text.slice(name.length + 1) : event.text
-  return text.charAt(0).toUpperCase() + text.slice(1)
+  return addressYou(text, nameOf(you.value))
 }
 
 // Making your own offer starts from the bot's: what it was giving you is

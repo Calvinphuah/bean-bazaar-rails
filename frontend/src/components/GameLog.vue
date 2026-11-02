@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue"
+import { addressYou } from "../rules"
 import type { LogEvent } from "../types"
 
 const props = defineProps<{
@@ -9,12 +10,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-// Newest first. The engine names every seat the same way, so "You's turn" is reworded here.
 const newestFirst = computed(() =>
-  [...props.entries].reverse().map((entry) => ({
-    ...entry,
-    text: entry.text === `${props.you}'s turn` ? "Your turn" : entry.text,
-  })),
+  [...props.entries].reverse().map((entry) => ({ ...entry, text: addressYou(entry.text, props.you) })),
 )
 </script>
 

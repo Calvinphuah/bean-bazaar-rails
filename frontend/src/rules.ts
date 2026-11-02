@@ -38,6 +38,13 @@ export function coinText(coins: number): string {
   return `${coins} ${coins === 1 ? "coin" : "coins"}`
 }
 
+// The engine names every seat the same way, so "Lima turned down You's offer"
+// and "You's turn" are reworded to "your offer" and "Your turn".
+export function addressYou(text: string, you: string): string {
+  const reworded = text.split(`${you}'s `).join("your ").split(` ${you}`).join(" you")
+  return reworded.charAt(0).toUpperCase() + reworded.slice(1)
+}
+
 // The current table in the same shape as a log event's snapshot.
 export function tableOf(game: GameState): TableSnapshot {
   return {
