@@ -58,7 +58,7 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
           class="chip-button card-button"
           :title="`Take back a ${beanTypes[group.bean]?.name} Bean`"
           :aria-label="`Take back a ${beanTypes[group.bean]?.name} Bean, ${group.cards.length} given`"
-          @click="emit('remove', group.last)"
+          @click="emit('remove', group.last); if (group.cards.length === 1) emit('point', null)"
           @mouseenter="emit('point', group.bean)"
           @mouseleave="emit('point', null)"
         >
@@ -82,28 +82,41 @@ const hasOffer = computed(() => props.gives.length > 0 || Object.keys(props.asks
     <div class="section">
       <h3>{{ bidWith ? `You get from ${bidWith}` : "You get" }}</h3>
       <div class="asks">
-        <button
+        <div
           v-for="bean in beans"
           :key="bean.key"
-          class="ask card-button"
-          :class="{ chosen: (getCounts[bean.key] ?? 0) > 0 }"
-          :title="`${bean.name} Bean: right-click to ask for one less`"
-          :aria-label="`Ask for a ${bean.name} bean${getCounts[bean.key] ? `, ${getCounts[bean.key]} asked` : ''}`"
-          @click="emit('ask', bean.key, 1)"
-          @contextmenu.prevent="emit('ask', bean.key, -1)"
-          @mouseenter="emit('point', bean.key)"
-          @mouseleave="emit('point', null)"
+          class="ask-slot"
         >
-          <img
-            :src="`/cards/${bean.key}-240.webp`"
-            alt=""
+          <button
+            class="ask card-button"
+            :class="{ chosen: (getCounts[bean.key] ?? 0) > 0 }"
+            :title="`${bean.name} Bean: right-click or press − to ask for one less`"
+            :aria-label="`Ask for a ${bean.name} bean${getCounts[bean.key] ? `, ${getCounts[bean.key]} asked` : ''}`"
+            @click="emit('ask', bean.key, 1)"
+            @contextmenu.prevent="emit('ask', bean.key, -1)"
+            @mouseenter="emit('point', bean.key)"
+            @mouseleave="emit('point', null)"
           >
-          <span class="ask-name">{{ bean.name }}</span>
-          <span
-            v-if="getCounts[bean.key]"
-            class="ask-count"
-          >{{ getCounts[bean.key] }}</span>
-        </button>
+            <img
+              :src="`/cards/${bean.key}-240.webp`"
+              alt=""
+            >
+            <span class="ask-name">{{ bean.name }}</span>
+            <span
+              v-if="getCounts[bean.key]"
+              class="ask-count"
+            >{{ getCounts[bean.key] }}</span>
+          </button>
+          <!-- Right-click needs a mouse; this works for touch and keyboard too. -->
+          <button
+            v-if="asks[bean.key]"
+            class="less"
+            :aria-label="`Ask for one less ${bean.name} bean`"
+            @click="emit('ask', bean.key, -1)"
+          >
+            −
+          </button>
+        </div>
       </div>
     </div>
 
@@ -147,6 +160,21 @@ h3 { font-size: 14px; }
 .chip-button:hover { transform: translateY(-2px); }
 .chip { display: block; width: 32px; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 4px; border: 2px solid var(--ink); }
 .asks { display: grid; grid-template-columns: repeat(var(--beans), 1fr); gap: 2px; }
+.ask-slot { position: relative; display: grid; }
+.less {
+  position: absolute;
+  top: -4px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  line-height: 1;
+  background: var(--panel);
+  box-shadow: none;
+}
 .ask { position: relative; display: grid; justify-items: center; gap: 2px; padding: 3px; border-radius: 8px; transition: background .15s ease; }
 .ask:hover { background: var(--panel-dark); }
 .ask.chosen { background: #cfe9c5; }

@@ -96,6 +96,8 @@ const isTrading = computed(() => live.value && myTurn.value && props.game.phase 
 // On a bot's turn, after turning its offer down to make your own.
 const isBidding = computed(() => live.value && props.game.bidding)
 const isDealing = computed(() => isTrading.value || isBidding.value)
+// The trade bar's buttons can vanish under the pointer, so its preview closes with it.
+watch(isDealing, (dealing) => { if (!dealing) pointedBean.value = null })
 // Not tied to `live`: the traded-beans panel stays up while each plant saves and
 // replays, instead of blinking out; only the plant buttons wait for `live`.
 const pendingIndex = computed(() => {
