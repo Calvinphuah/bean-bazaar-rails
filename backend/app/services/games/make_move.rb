@@ -34,7 +34,8 @@ class Games::MakeMove < ApplicationService
   def load_game
     @game.lock!
     @engine = @game.engine
-    @state_before = @engine.to_h.deep_stringify_keys
+    # The log is the largest part of the state and undo can rebuild it, so it isn't kept.
+    @state_before = @engine.to_h.deep_stringify_keys.except('log')
   end
 
   def apply_move
@@ -67,7 +68,8 @@ class Games::MakeMove < ApplicationService
   # Puts the table back as it was before the human's last undoable move.
   def undo
     state = @game.undo_states.pop || illegal!('nothing_to_undo')
-    @engine = BeanBazaar::Game.from_h(state)
+    log = @engine.log.map(&:deep_stringify_keys).select { |event| event['seq'] <= state['event_seq'] }
+    @engine = BeanBazaar::Game.from_h(state.merge('log' => log))
   end
 
   # Keeps the state from before an undoable move, as long as the move revealed

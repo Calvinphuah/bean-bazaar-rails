@@ -36,12 +36,15 @@ RSpec.describe Games::MakeMove do
       move('plant_from_hand', field_index: 0)
       move('harvest', field_index: 0)
       expect(game.reload.undo_states.size).to eq(2)
+      expect(game.undo_states.map(&:keys).flatten).not_to include('log')
 
       move('undo')
       expect(saved.players.first.fields.first.bean).to eq(:blue)
       move('undo')
       expect(saved.players.first.hand.cards).to eq(%i[blue soy chili])
       expect(saved.hand_plants).to eq(0)
+      # The log is rebuilt from the live one, minus the moves taken back.
+      expect(saved.log.map { |event| event['type'] }).not_to include('plant', 'harvest')
       expect(game.reload.undo_states).to be_empty
     end
 
